@@ -476,8 +476,3 @@ The panel also shows live status pills (active service count, network, generatio
 - **[x402.org](https://x402.org)** — x402 protocol specification.
 - **[Algorand TestNet Dispenser](https://bank.testnet.algorand.network/)** — Get free TestNet ALGO.
 
----
-
-## License
-
-Add a license file (e.g. `LICENSE`) if you open-source the project.
