@@ -194,4 +194,53 @@ router.put("/", requireAuth, async (req, res) => {
   }
 });
 
+import { encryptSecret, decryptSecret } from "../utils/encrypt.js";
+
+/**
+ * GET /api/profile/burner
+ * Fetch the user's synced burner wallet mnemonic
+ */
+router.get("/burner", requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    
+    if (!user.burnerWalletEncrypted) {
+      return res.json({ mnemonic: null });
+    }
+    
+    try {
+      const mnemonic = decryptSecret(user.burnerWalletEncrypted);
+      return res.json({ mnemonic });
+    } catch (err) {
+      return res.json({ mnemonic: null, error: "Failed to decrypt" });
+    }
+  } catch (e) {
+    res.status(500).json({ error: "Failed to fetch burner wallet" });
+  }
+});
+
+/**
+ * POST /api/profile/burner
+ * Sync a new burner wallet mnemonic to the user's profile
+ */
+router.post("/burner", requireAuth, async (req, res) => {
+  try {
+    const { mnemonic } = req.body;
+    if (!mnemonic || typeof mnemonic !== "string") {
+      return res.status(400).json({ error: "Valid mnemonic is required" });
+    }
+    
+    const user = await User.findById(req.user.userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+    
+    user.burnerWalletEncrypted = encryptSecret(mnemonic.trim());
+    await user.save();
+    
+    return res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to sync burner wallet" });
+  }
+});
+
 export default router;

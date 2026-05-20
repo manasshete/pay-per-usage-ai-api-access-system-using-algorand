@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { body, validationResult } from "express-validator";
 import jwt from "jsonwebtoken";
-import admin from "firebase-admin";
+import { getFirebaseAdmin } from "../config/firebaseAdmin.js";
 import { User } from "../models/User.js";
 import { requireAuth } from "../middleware/auth.js";
 import {
@@ -11,26 +11,11 @@ import {
 
 const router = Router();
 
-// Initialize Firebase Admin SDK lazily
-let firebaseAdminInitialized = false;
 function verifyFirebaseToken(idToken) {
-  if (!firebaseAdminInitialized) {
-    const projectId = process.env.FIREBASE_PROJECT_ID;
-    if (projectId) {
-      try {
-        admin.initializeApp({ projectId });
-        firebaseAdminInitialized = true;
-        console.log(`[Firebase Admin] Initialized with project ID: ${projectId}`);
-      } catch (e) {
-        console.error("[Firebase Admin] Initialization failed:", e.message);
-      }
-    } else {
-      console.warn("[Firebase Admin] FIREBASE_PROJECT_ID is not set in env. Using Mock Verification.");
-    }
-  }
+  const admin = getFirebaseAdmin();
 
   // Developer mock verification fallback
-  if (!firebaseAdminInitialized || idToken.startsWith("mock-")) {
+  if (!admin || idToken.startsWith("mock-")) {
     console.log("[Firebase Admin] Performing mock token decoding for ID token:", idToken);
     
     let email = "dev-user@example.com";

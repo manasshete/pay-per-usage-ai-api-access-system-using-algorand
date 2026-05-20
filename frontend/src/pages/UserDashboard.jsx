@@ -5,6 +5,7 @@ import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import UserLiveWalletBar from "../components/UserLiveWalletBar.jsx";
 import ProfileDropdown from "../components/ProfileDropdown.jsx";
+import UserSidebar from "../components/UserSidebar.jsx";
 
 export default function UserDashboard() {
   const { user, logout } = useAuth();
@@ -53,36 +54,7 @@ export default function UserDashboard() {
         </div>
       </header>
 
-      <aside className="fixed left-0 top-16 bottom-0 w-64 bg-slate-50 border-r border-slate-100 flex-col py-8 text-[0.875rem] overflow-y-auto max-md:hidden md:flex">
-        <Link
-          to="/user/marketplace"
-          className="flex items-center gap-3 px-6 py-3 text-slate-500 hover:bg-slate-100"
-        >
-          <span className="material-symbols-outlined">storefront</span>
-          Marketplace
-        </Link>
-        <Link
-          to="/user/dashboard"
-          className="flex items-center gap-3 px-6 py-3 text-slate-900 font-semibold bg-slate-100 border-r-2 border-slate-900"
-        >
-          <span className="material-symbols-outlined">key</span>
-          Keys &amp; usage
-        </Link>
-        <Link
-          to="/user/analytics"
-          className="flex items-center gap-3 px-6 py-3 text-slate-500 hover:bg-slate-100"
-        >
-          <span className="material-symbols-outlined">insights</span>
-          Usage Analytics
-        </Link>
-        <Link
-          to="/user/transactions"
-          className="flex items-center gap-3 px-6 py-3 text-slate-500 hover:bg-slate-100"
-        >
-          <span className="material-symbols-outlined">receipt_long</span>
-          Transaction history
-        </Link>
-      </aside>
+      <UserSidebar activeTab="dashboard" />
 
       <main className="md:pl-64 pt-24 px-6 pb-16 max-w-4xl">
         <h1 className="font-headline text-2xl font-semibold text-primary mb-2">Proxy keys &amp; usage</h1>

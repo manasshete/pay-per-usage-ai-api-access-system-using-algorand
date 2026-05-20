@@ -8,6 +8,8 @@ import CreateService from "./pages/CreateService.jsx";
 import PredictionDashboard from "./pages/PredictionDashboard.jsx";
 import UserDashboard from "./pages/UserDashboard.jsx";
 import TransactionHistory from "./pages/TransactionHistory.jsx";
+import HostedApps from "./pages/HostedApps.jsx";
+import DevDashboard from "./pages/DevDashboard.jsx";
 
 function Guard({ role, children }) {
   const { user, loading } = useAuth();
@@ -103,6 +105,14 @@ export default function App() {
         }
       />
       <Route
+        path="/user/hosted-apps"
+        element={
+          <Guard role="user">
+            <HostedApps />
+          </Guard>
+        }
+      />
+      <Route
         path="/creator"
         element={
           <Guard role="creator">
@@ -118,6 +128,7 @@ export default function App() {
           </Guard>
         }
       />
+      <Route path="/dev-dashboard" element={<DevDashboard />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

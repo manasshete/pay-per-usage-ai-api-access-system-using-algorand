@@ -1,5 +1,6 @@
 import algosdk from "algosdk";
 import { signAndSendPayment } from "./pera.js";
+import { api } from "../api/client.js";
 
 // Storage key for the burner wallet
 const BURNER_WALLET_KEY = "burner_wallet_mnemonic";
@@ -23,7 +24,39 @@ export function getBurnerWallet() {
   const mnemonic = algosdk.secretKeyToMnemonic(newAccount.sk);
   localStorage.setItem(BURNER_WALLET_KEY, mnemonic);
   
+  // Try to sync it to backend in background (fire-and-forget)
+  syncBurnerWallet(mnemonic).catch(console.error);
+  
   return { addr: newAccount.addr.toString(), sk: newAccount.sk };
+}
+
+export async function syncBurnerWallet(mnemonic) {
+  try {
+    const m = mnemonic || localStorage.getItem(BURNER_WALLET_KEY);
+    if (!m) return;
+    await api.post("/profile/burner", { mnemonic: m });
+  } catch (err) {
+    console.error("Failed to sync burner wallet to profile:", err);
+  }
+}
+
+export async function fetchBurnerWallet() {
+  try {
+    const res = await api.get("/profile/burner");
+    if (res.data?.mnemonic) {
+      localStorage.setItem(BURNER_WALLET_KEY, res.data.mnemonic);
+      return res.data.mnemonic;
+    }
+    // If backend doesn't have one, but we have one locally, sync it up
+    const local = localStorage.getItem(BURNER_WALLET_KEY);
+    if (local) {
+      await syncBurnerWallet(local);
+      return local;
+    }
+  } catch (err) {
+    console.error("Failed to fetch burner wallet from profile:", err);
+  }
+  return null;
 }
 
 /**

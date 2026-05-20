@@ -5,6 +5,7 @@ import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import UserLiveWalletBar from "../components/UserLiveWalletBar.jsx";
 import ProfileDropdown from "../components/ProfileDropdown.jsx";
+import UserSidebar from "../components/UserSidebar.jsx";
 
 const EXPLORER_TX = "https://testnet.algoexplorer.io/tx/";
 
@@ -65,7 +66,9 @@ export default function TransactionHistory() {
         </div>
       </header>
 
-      <main className="pt-24 px-4 sm:px-6 pb-24 max-w-6xl mx-auto">
+      <UserSidebar activeTab="transactions" />
+
+      <main className="md:pl-64 pt-24 px-4 sm:px-6 pb-24 max-w-6xl mx-auto">
         <div className="flex flex-wrap gap-3 mb-6 items-end">
           <div>
             <label className="block text-xs text-on-surface-variant mb-1">Service</label>

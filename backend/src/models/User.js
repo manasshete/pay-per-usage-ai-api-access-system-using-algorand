@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema(
     displayName: { type: String, unique: true, sparse: true, trim: true },
     photoURL: { type: String, trim: true },
     role: { type: String, enum: ["user", "creator"], required: true, default: "user" },
+    burnerWalletEncrypted: { type: String, trim: true },
   },
   { timestamps: { createdAt: true, updatedAt: true } }
 );

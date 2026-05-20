@@ -5,6 +5,7 @@ import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import UserLiveWalletBar from "../components/UserLiveWalletBar.jsx";
 import ProfileDropdown from "../components/ProfileDropdown.jsx";
+import UserSidebar from "../components/UserSidebar.jsx";
 import { chargeForTokens } from "../utils/tokenPricing.js";
 import { useTokenEstimate } from "../hooks/useTokenEstimate.js";
 
@@ -41,7 +42,14 @@ function MarketplaceCard({ s }) {
       to={`/user/services/${s._id}`}
       className="block bg-white border border-surface-variant rounded-md p-6 hover:border-secondary transition-colors editorial-shadow"
     >
-      <h2 className="font-headline font-semibold text-primary text-lg">{s.title}</h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="font-headline font-semibold text-primary text-lg">{s.title}</h2>
+        {s.isSentinalOfficial && (
+          <span className="bg-primary/10 text-primary border border-primary/20 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+            Powering Sentinal Chat
+          </span>
+        )}
+      </div>
       <p className="text-sm text-on-surface-variant mt-2 line-clamp-3">{s.description}</p>
       <p className="mt-2 text-xs text-on-surface-variant">
         {(s.aiProvider || "—") + " · " + (s.modelName || "—")}
@@ -124,40 +132,7 @@ export default function UserMarketplace() {
         </div>
       </header>
 
-      <aside className="fixed left-0 top-16 bottom-0 w-64 bg-slate-50 dark:bg-slate-950 border-r border-slate-100 dark:border-slate-800 flex-col py-8 font-body text-[0.875rem] overflow-y-auto max-md:hidden md:flex">
-        <div className="px-6 mb-8">
-          <h3 className="text-slate-900 dark:text-white font-semibold">User</h3>
-          <p className="text-slate-500 dark:text-slate-400 text-xs">Verified Role</p>
-        </div>
-        <Link
-          to="/user/marketplace"
-          className="flex items-center space-x-3 px-6 py-3 text-slate-900 dark:text-white font-semibold border-r-2 border-slate-900 dark:border-slate-50 bg-slate-100 dark:bg-slate-900"
-        >
-          <span className="material-symbols-outlined">storefront</span>
-          <span>Marketplace</span>
-        </Link>
-        <Link
-          to="/user/dashboard"
-          className="flex items-center space-x-3 px-6 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-        >
-          <span className="material-symbols-outlined">key</span>
-          <span>Keys &amp; usage</span>
-        </Link>
-        <Link
-          to="/user/analytics"
-          className="flex items-center space-x-3 px-6 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-        >
-          <span className="material-symbols-outlined">insights</span>
-          <span>Usage Analytics</span>
-        </Link>
-        <Link
-          to="/user/transactions"
-          className="flex items-center space-x-3 px-6 py-3 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors"
-        >
-          <span className="material-symbols-outlined">receipt_long</span>
-          <span>Transaction history</span>
-        </Link>
-      </aside>
+      <UserSidebar activeTab="marketplace" />
 
       <main className="md:pl-64 pt-24 px-6 pb-16 max-w-5xl">
         <h1 className="font-headline text-2xl font-semibold text-primary mb-2">Marketplace</h1>

@@ -19,6 +19,7 @@ const serviceSchema = new mongoose.Schema(
     encryptedApiKey: { type: String },
     modelName: { type: String, default: "" },
     isPaused: { type: Boolean, default: false },
+    isSentinalOfficial: { type: Boolean, default: false },
   },
   { timestamps: { createdAt: true, updatedAt: true } }
 );

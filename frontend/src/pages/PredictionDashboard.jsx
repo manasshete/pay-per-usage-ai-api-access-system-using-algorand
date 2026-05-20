@@ -5,6 +5,7 @@ import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import UserLiveWalletBar from "../components/UserLiveWalletBar.jsx";
 import ProfileDropdown from "../components/ProfileDropdown.jsx";
+import UserSidebar from "../components/UserSidebar.jsx";
 import { useTokenEstimate } from "../hooks/useTokenEstimate.js";
 
 // ── Inline bar chart (no external dep) ───────────────────────────────────────
@@ -191,28 +192,7 @@ export default function PredictionDashboard() {
       </header>
 
       {/* ── Sidebar ── */}
-      <aside className="fixed left-0 top-16 bottom-0 w-64 bg-slate-50 border-r border-surface-container-high flex-col py-8 font-body text-[0.875rem] overflow-y-auto max-md:hidden md:flex">
-        <div className="px-6 mb-8">
-          <h3 className="text-primary font-semibold">User</h3>
-          <p className="text-on-surface-variant text-xs">Verified Role</p>
-        </div>
-        <Link to="/user/marketplace" className="flex items-center space-x-3 px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors">
-          <span className="material-symbols-outlined">storefront</span>
-          <span>Marketplace</span>
-        </Link>
-        <Link to="/user/dashboard" className="flex items-center space-x-3 px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors">
-          <span className="material-symbols-outlined">key</span>
-          <span>Keys &amp; usage</span>
-        </Link>
-        <Link to="/user/analytics" className="flex items-center space-x-3 px-6 py-3 text-primary font-semibold border-r-2 border-primary bg-surface-container">
-          <span className="material-symbols-outlined">insights</span>
-          <span>Usage Analytics</span>
-        </Link>
-        <Link to="/user/transactions" className="flex items-center space-x-3 px-6 py-3 text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors">
-          <span className="material-symbols-outlined">receipt_long</span>
-          <span>Transaction history</span>
-        </Link>
-      </aside>
+      <UserSidebar activeTab="analytics" />
 
       {/* ── Main ── */}
       <main className="md:pl-64 pt-24 px-6 pb-16 max-w-6xl">

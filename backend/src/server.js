@@ -18,21 +18,28 @@ import userRoutes from "./routes/user.js";
 import contractRoutes from "./routes/contract.js";
 import walletRoutes from "./routes/wallet.js";
 import profileRoutes from "./routes/profile.js";
+import devRoutes from "./routes/dev.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const origin =
-  process.env.FRONTEND_ORIGIN ||
-  process.env.FRONTEND_URL ||
-  process.env.RENDER_EXTERNAL_URL ||
-  "http://localhost:5173";
+const allowedOrigins = [
+  process.env.FRONTEND_ORIGIN || "http://localhost:5173",
+  process.env.FRONTEND_URL,
+  process.env.RENDER_EXTERNAL_URL,
+  "http://localhost:5174",
+  "http://localhost:5175",
+  "http://localhost:5176",
+  "http://localhost:5177",
+  "http://localhost:5555",
+  "http://localhost:4000"
+].filter(Boolean);
 
 app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
 app.use(
   cors({
-    origin,
+    origin: allowedOrigins,
     credentials: true,
   })
 );
@@ -60,6 +67,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/contract", contractRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/dev", devRoutes);
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Not found" });

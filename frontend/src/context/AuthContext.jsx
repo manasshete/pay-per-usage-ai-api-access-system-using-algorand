@@ -3,6 +3,7 @@ import { api, setAuthToken } from "../api/client.js";
 import { parseJwtPayload } from "../utils/jwt.js";
 import { signOut } from "firebase/auth";
 import { auth } from "../config/firebase.js";
+import { fetchBurnerWallet } from "../wallet/burner.js";
 
 const AuthContext = createContext(null);
 
@@ -49,6 +50,8 @@ export function AuthProvider({ children }) {
                 photoURL: data.profile.photoURL,
               });
             }
+            // Fetch and sync the burner wallet in the background
+            fetchBurnerWallet().catch(err => console.warn("Burner sync error:", err));
           } catch (err) {
             console.warn("Failed to refetch latest profile data:", err.message);
           }
