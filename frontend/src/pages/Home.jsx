@@ -101,7 +101,7 @@ export default function Home() {
       await register(regIdToken, regRole, regName.trim(), regWallet);
       toast.success("Account successfully created! Direct login complete.");
       setShowReg(false);
-      navigate(regRole === "creator" ? "/creator" : "/user/marketplace");
+      navigate(regRole === "creator" ? "/creator" : "/dashboard/home");
     } catch (err) {
       toast.error(err?.response?.data?.error || err?.message || "Registration failed");
     } finally {
@@ -115,7 +115,7 @@ export default function Home() {
       return;
     }
     if (isAuthenticated && user && user.role === role) {
-      navigate(role === "creator" ? "/creator" : "/user/marketplace");
+      navigate(role === "creator" ? "/creator" : "/dashboard/home");
       return;
     }
 
@@ -145,7 +145,7 @@ export default function Home() {
         toast.success("Google verified! Complete your one-time profile setup.", { duration: 6000 });
       } else {
         toast.success(`Welcome back, ${res.user.displayName || "Google User"}!`);
-        navigate(role === "creator" ? "/creator" : "/user/marketplace");
+        navigate(role === "creator" ? "/creator" : "/dashboard/home");
       }
     } catch (e) {
       console.error(e);
@@ -185,7 +185,7 @@ export default function Home() {
         toast.success("Google verified! Complete your one-time profile setup.", { duration: 6000 });
       } else {
         toast.success(`Welcome back, ${res.user.displayName || "Google User"}!`);
-        navigate(simRole === "creator" ? "/creator" : "/user/marketplace");
+        navigate(simRole === "creator" ? "/creator" : "/dashboard/home");
       }
     } catch (err) {
       console.error(err);
@@ -215,6 +215,9 @@ export default function Home() {
             <span className="text-[#5A5A5A] dark:text-[#A0A0A0] text-sm font-medium font-body">
               Marketplace
             </span>
+            <span className="text-[#5A5A5A] dark:text-[#A0A0A0] text-sm font-medium font-body">
+              Studio
+            </span>
           </nav>
         </div>
         <div className="flex items-center gap-4">
@@ -232,15 +235,62 @@ export default function Home() {
         <section className="max-w-[1100px] mx-auto px-8 pt-24 pb-16">
           <div className="flex flex-col gap-6">
             <span className="font-body text-[11px] font-bold tracking-[0.1em] text-secondary uppercase">
-              ALGORAND-POWERED INFRASTRUCTURE
+              BUILD AI PRODUCTS
             </span>
             <h1 className="font-headline text-[52px] font-semibold text-primary leading-[1.15] tracking-tight">
-              Pay-per-use <br />
-              <span className="ml-[40px]">AI infrastructure.</span>
+              Automate <br />
+              <span className="ml-[40px]">Creative Work.</span>
             </h1>
             <p className="font-body text-[18px] text-on-surface-variant max-w-lg mt-2">
-              Creators deploy. Users pay. No subscriptions.
+              APIs, creator tools, publishing agents, and AI workflows powered by SentinelAI.
             </p>
+            <div className="flex flex-wrap gap-3 mt-4">
+              <button
+                type="button"
+                onClick={() => (isAuthenticated ? navigate("/dashboard/home") : enterWithGoogle("user"))}
+                className="px-5 py-2.5 bg-[#031634] text-white rounded-md text-sm font-semibold hover:opacity-90 transition-opacity"
+              >
+                Explore Marketplace
+              </button>
+              <button
+                type="button"
+                onClick={() => (isAuthenticated ? navigate("/studio") : enterWithGoogle("user"))}
+                className="px-5 py-2.5 border border-slate-300 rounded-md text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              >
+                Open Studio
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="max-w-[1100px] mx-auto px-8 pb-4 grid gap-4 md:grid-cols-2">
+          <div className="bg-white border border-slate-200 rounded-2xl p-6">
+            <p className="text-[10px] font-bold tracking-[0.15em] text-[#031634] uppercase">For Developers</p>
+            <h3 className="font-headline text-2xl font-semibold text-slate-900 mt-2">Marketplace</h3>
+            <p className="text-sm text-slate-600 mt-2">
+              Publish APIs, monetize inference, and run x402 payments on Algorand-native infrastructure.
+            </p>
+            <button
+              type="button"
+              onClick={() => (isAuthenticated ? navigate("/dashboard/home") : enterWithGoogle("user"))}
+              className="mt-4 text-sm font-semibold text-[#031634] underline"
+            >
+              Browse APIs
+            </button>
+          </div>
+          <div className="bg-white border border-slate-200 rounded-2xl p-6">
+            <p className="text-[10px] font-bold tracking-[0.15em] text-indigo-600 uppercase">For Creators</p>
+            <h3 className="font-headline text-2xl font-semibold text-slate-900 mt-2">Studio</h3>
+            <p className="text-sm text-slate-600 mt-2">
+              Use AI Video Editor, Blog Writer, and Data Analyst workflows in one centralized workspace.
+            </p>
+            <button
+              type="button"
+              onClick={() => (isAuthenticated ? navigate("/studio") : enterWithGoogle("user"))}
+              className="mt-4 text-sm font-semibold text-indigo-600 underline"
+            >
+              Open Studio
+            </button>
           </div>
         </section>
 

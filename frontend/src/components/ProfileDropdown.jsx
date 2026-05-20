@@ -248,7 +248,7 @@ export default function ProfileDropdown() {
             ) : (
               <>
                 <Link
-                  to="/user/marketplace"
+                  to="/dashboard/browse"
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-2 py-1.5 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white text-xs font-medium transition-colors"
                 >
@@ -256,7 +256,7 @@ export default function ProfileDropdown() {
                   Browse Marketplace
                 </Link>
                 <Link
-                  to="/user/dashboard"
+                  to="/dashboard/keys"
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-2 py-1.5 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white text-xs font-medium transition-colors"
                 >

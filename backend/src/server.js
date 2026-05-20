@@ -1,5 +1,4 @@
-// Trigger reload to load new creator wallet validation route changes
-import "dotenv/config";
+import "./loadEnv.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import express from "express";
@@ -19,6 +18,8 @@ import contractRoutes from "./routes/contract.js";
 import walletRoutes from "./routes/wallet.js";
 import profileRoutes from "./routes/profile.js";
 import devRoutes from "./routes/dev.js";
+import studioRoutes from "./routes/studio.routes.js";
+import { startPublishingWorker } from "./workers/publishingWorker.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,6 +69,7 @@ app.use("/api/contract", contractRoutes);
 app.use("/api/wallet", walletRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/dev", devRoutes);
+app.use("/api/studio", studioRoutes);
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Not found" });
@@ -102,6 +104,11 @@ const port = Number(process.env.PORT) || 5000;
 
 connectDb()
   .then(() => {
+    try {
+      startPublishingWorker();
+    } catch (e) {
+      console.warn("[publishingWorker] failed to start:", e.message);
+    }
     const server = app.listen(port, () => {
       console.log(`API listening on ${port}`);
     });

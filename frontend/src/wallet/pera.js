@@ -112,6 +112,7 @@ export async function signAndSendPayment({
   amountMicroAlgos,
   noteStr,
   algodServer,
+  confirmRounds = 100,
 }) {
   const algosdk = (await import("algosdk")).default;
 
@@ -162,6 +163,7 @@ export async function signAndSendPayment({
   if (!txid) {
     throw new Error("Network did not return a transaction id after submit.");
   }
-  await algosdk.waitForConfirmation(algod, txid, 100);
+  const rounds = Number.isFinite(confirmRounds) && confirmRounds > 0 ? confirmRounds : 4;
+  await algosdk.waitForConfirmation(algod, txid, rounds);
   return { txId: txid };
 }

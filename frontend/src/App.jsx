@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import { useAuth } from "./context/AuthContext.jsx";
 import Home from "./pages/Home.jsx";
 import UserMarketplace from "./pages/UserMarketplace.jsx";
@@ -10,6 +10,23 @@ import UserDashboard from "./pages/UserDashboard.jsx";
 import TransactionHistory from "./pages/TransactionHistory.jsx";
 import HostedApps from "./pages/HostedApps.jsx";
 import DevDashboard from "./pages/DevDashboard.jsx";
+import StudioToolPage from "./pages/StudioToolPage.jsx";
+import StudioQueue from "./pages/StudioQueue.jsx";
+import StudioExports from "./pages/StudioExports.jsx";
+import StudioStorage from "./pages/StudioStorage.jsx";
+import MarketplaceCreators from "./pages/MarketplaceCreators.jsx";
+import MarketplaceLayout from "./layouts/MarketplaceLayout.jsx";
+import StudioLayout from "./layouts/StudioLayout.jsx";
+import StudioHome from "./pages/studio/StudioHome.jsx";
+import BloggingAgent from "./pages/studio/BloggingAgent.jsx";
+import StudioProjects from "./pages/studio/Projects.jsx";
+import ProjectDetail from "./pages/studio/ProjectDetail.jsx";
+import StudioCalendar from "./pages/studio/Calendar.jsx";
+import StudioDrafts from "./pages/studio/Drafts.jsx";
+import StudioPublished from "./pages/studio/Published.jsx";
+import StudioPlatforms from "./pages/studio/Platforms.jsx";
+import StudioAnalytics from "./pages/studio/Analytics.jsx";
+import StudioPlan from "./pages/studio/StudioPlan.jsx";
 
 function Guard({ role, children }) {
   const { user, loading } = useAuth();
@@ -24,7 +41,7 @@ function Guard({ role, children }) {
     return <Navigate to="/" replace />;
   }
   if (user.role !== role) {
-    return <Navigate to={user.role === "user" ? "/user/marketplace" : "/creator"} replace />;
+    return <Navigate to={user.role === "user" ? "/dashboard/home" : "/creator"} replace />;
   }
   return children;
 }
@@ -49,7 +66,12 @@ function ProfileRedirect() {
   if (user?.role === "creator") {
     return <Navigate to="/creator" replace />;
   }
-  return <Navigate to="/user/marketplace" replace />;
+  return <Navigate to="/dashboard/home" replace />;
+}
+
+function RedirectUserService() {
+  const { id } = useParams();
+  return <Navigate to={`/dashboard/services/${id}`} replace />;
 }
 
 export default function App() {
@@ -64,54 +86,115 @@ export default function App() {
           </ProfileGuard>
         }
       />
+
+      <Route path="/user/marketplace" element={<Navigate to="/dashboard/browse" replace />} />
+      <Route path="/user/dashboard" element={<Navigate to="/dashboard/home" replace />} />
+      <Route path="/user/analytics" element={<Navigate to="/dashboard/usage" replace />} />
+      <Route path="/user/transactions" element={<Navigate to="/billing/transactions" replace />} />
+      <Route path="/user/apps" element={<Navigate to="/studio/apps" replace />} />
+
+      <Route path="/marketplace" element={<Navigate to="/dashboard/browse" replace />} />
+      <Route path="/marketplace/home" element={<Navigate to="/dashboard/home" replace />} />
+      <Route path="/marketplace/featured" element={<Navigate to="/dashboard/featured" replace />} />
+      <Route path="/marketplace/categories" element={<Navigate to="/dashboard/categories" replace />} />
+      <Route path="/marketplace/keys" element={<Navigate to="/dashboard/keys" replace />} />
+      <Route path="/marketplace/usage" element={<Navigate to="/dashboard/usage" replace />} />
+      <Route path="/marketplace/creators" element={<Navigate to="/dashboard/creators" replace />} />
       <Route
-        path="/user/marketplace"
+        path="/marketplace/services/:id"
         element={
           <Guard role="user">
-            <UserMarketplace />
+            <RedirectUserService />
           </Guard>
         }
       />
+
+      <Route
+        path="/dashboard"
+        element={
+          <Guard role="user">
+            <MarketplaceLayout />
+          </Guard>
+        }
+      >
+        <Route index element={<Navigate to="home" replace />} />
+        <Route path="home" element={<UserDashboard />} />
+        <Route path="browse" element={<UserMarketplace />} />
+        <Route path="featured" element={<UserMarketplace />} />
+        <Route path="categories" element={<UserMarketplace />} />
+        <Route path="keys" element={<UserDashboard />} />
+        <Route path="usage" element={<PredictionDashboard />} />
+        <Route path="creators" element={<MarketplaceCreators />} />
+        <Route path="services/:id" element={<ServiceDetail />} />
+      </Route>
+
       <Route
         path="/user/services/:id"
         element={
           <Guard role="user">
-            <ServiceDetail />
+            <RedirectUserService />
           </Guard>
         }
       />
+
       <Route
-        path="/user/dashboard"
+        path="/billing"
         element={
           <Guard role="user">
-            <UserDashboard />
+            <MarketplaceLayout />
           </Guard>
         }
-      />
+      >
+        <Route path="transactions" element={<TransactionHistory />} />
+      </Route>
+
+      <Route path="/user/hosted-apps" element={<Navigate to="/studio/apps" replace />} />
+
       <Route
-        path="/user/transactions"
+        path="/studio"
         element={
           <Guard role="user">
-            <TransactionHistory />
+            <StudioLayout />
           </Guard>
         }
-      />
-      <Route
-        path="/user/analytics"
-        element={
-          <Guard role="user">
-            <PredictionDashboard />
-          </Guard>
-        }
-      />
-      <Route
-        path="/user/hosted-apps"
-        element={
-          <Guard role="user">
-            <HostedApps />
-          </Guard>
-        }
-      />
+      >
+        <Route index element={<StudioHome />} />
+        <Route path="blogging-agent" element={<BloggingAgent />} />
+        <Route path="projects" element={<StudioProjects />} />
+        <Route path="projects/:id" element={<ProjectDetail />} />
+        <Route path="calendar" element={<StudioCalendar />} />
+        <Route path="drafts" element={<StudioDrafts />} />
+        <Route path="published" element={<StudioPublished />} />
+        <Route path="platforms" element={<StudioPlatforms />} />
+        <Route path="analytics" element={<StudioAnalytics />} />
+        <Route path="plan" element={<StudioPlan />} />
+        <Route path="apps" element={<HostedApps />} />
+        <Route path="queue" element={<StudioQueue />} />
+        <Route path="exports" element={<StudioExports />} />
+        <Route path="storage" element={<StudioStorage />} />
+        <Route
+          path="video-editor"
+          element={
+            <StudioToolPage
+              tool="AI Video Editor"
+              description="Create short-form edits, cuts, captions, and export-ready clips."
+              icon="movie"
+            />
+          }
+        />
+        <Route path="blog-writer" element={<Navigate to="/studio/blogging-agent" replace />} />
+        <Route
+          path="data-analyst"
+          element={
+            <StudioToolPage
+              tool="AI Data Analyst"
+              description="Analyze datasets, generate summaries, and produce insight-first reports."
+              icon="monitoring"
+            />
+          }
+        />
+      </Route>
+
       <Route
         path="/creator"
         element={

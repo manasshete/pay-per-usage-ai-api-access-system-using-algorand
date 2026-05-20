@@ -255,7 +255,7 @@ curl -sS "${apiBase}/api/use" \\
     return (
       <div className="min-h-screen pt-24 px-6 bg-surface flex flex-col items-center justify-center gap-4">
         <p className="text-on-surface-variant">Service not found.</p>
-        <Link to="/user/marketplace" className="text-sm text-secondary hover:underline">
+        <Link to="/dashboard/browse" className="text-sm text-secondary hover:underline">
           ← Back to Marketplace
         </Link>
       </div>
@@ -266,18 +266,16 @@ curl -sS "${apiBase}/api/use" \\
   const devShort = shortenWallet(service.creatorWallet);
 
   return (
-    <div className="min-h-screen bg-surface font-body text-on-surface">
-      <nav className="bg-white flex justify-between items-center h-16 px-4 sm:px-6 w-full border-b border-slate-100 fixed top-0 z-40 gap-2">
-        <Link to="/user/marketplace" className="text-sm text-secondary hover:underline shrink-0">
+    <div className="font-body text-on-surface max-w-3xl mx-auto">
+      <div className="flex justify-end items-center gap-4 mb-4">
+        <Link to="/dashboard/browse" className="text-sm text-secondary hover:underline shrink-0">
           ← Marketplace
         </Link>
-        <div className="flex items-center gap-4">
-          {user?.walletAddress && <UserLiveWalletBar walletAddress={user.walletAddress} />}
-          <ProfileDropdown />
-        </div>
-      </nav>
+        {user?.walletAddress && <UserLiveWalletBar walletAddress={user.walletAddress} />}
+        <ProfileDropdown />
+      </div>
 
-      <div className="pt-24 px-6 max-w-3xl mx-auto pb-24">
+      <div className="pb-12">
         <h1 className="font-headline text-3xl font-semibold text-primary">{service.title}</h1>
         <p className="mt-4 text-on-surface-variant leading-relaxed">{service.description}</p>
 

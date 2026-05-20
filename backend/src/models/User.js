@@ -9,6 +9,13 @@ const userSchema = new mongoose.Schema(
     photoURL: { type: String, trim: true },
     role: { type: String, enum: ["user", "creator"], required: true, default: "user" },
     burnerWalletEncrypted: { type: String, trim: true },
+    subscriptionTier: {
+      type: String,
+      enum: ["free", "creator", "pro", "enterprise"],
+      default: "free",
+    },
+    monthlyBlogsUsed: { type: Number, default: 0 },
+    usageResetAt: { type: Date },
   },
   { timestamps: { createdAt: true, updatedAt: true } }
 );

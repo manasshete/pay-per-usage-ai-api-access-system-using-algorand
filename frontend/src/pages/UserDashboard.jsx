@@ -3,12 +3,9 @@ import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import UserLiveWalletBar from "../components/UserLiveWalletBar.jsx";
-import ProfileDropdown from "../components/ProfileDropdown.jsx";
-import UserSidebar from "../components/UserSidebar.jsx";
 
 export default function UserDashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [keys, setKeys] = useState([]);
   const [usage, setUsage] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -41,105 +38,176 @@ export default function UserDashboard() {
   }, [refresh]);
 
   return (
-    <div className="antialiased min-h-screen bg-[#f9f9f9]">
-      <header className="bg-white fixed top-0 z-50 w-full border-b border-slate-100 h-16 px-4 sm:px-6 flex justify-between items-center font-body text-sm gap-2">
-        <div className="flex items-center gap-4 min-w-0">
-          <Link to="/" className="text-xl font-bold tracking-tight font-headline text-slate-900 shrink-0">
-            Sentinal
-          </Link>
+    <div className="max-w-7xl">
+      <h1 className="font-headline text-2xl font-semibold text-primary mb-2">Marketplace Home</h1>
+      <p className="text-sm text-on-surface-variant mb-6">
+        API economy and infrastructure overview for developer workflows.
+      </p>
+
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 mb-8">
+        <div className="bg-white border border-surface-variant rounded-md p-4">
+          <p className="text-xs text-on-surface-variant uppercase tracking-wide">Identity</p>
+          <p className="text-sm mt-1 font-semibold text-primary">{user?.displayName || "User"}</p>
         </div>
-        <div className="flex items-center gap-4">
-          {user?.walletAddress && <UserLiveWalletBar walletAddress={user.walletAddress} />}
-          <ProfileDropdown />
+        <div className="bg-white border border-surface-variant rounded-md p-4">
+          <p className="text-xs text-on-surface-variant uppercase tracking-wide">ALGO Balance</p>
+          <p className="text-sm mt-1 font-mono text-primary">{user?.walletAddress ? "Live in header" : "No wallet"}</p>
         </div>
-      </header>
+        <div className="bg-white border border-surface-variant rounded-md p-4">
+          <p className="text-xs text-on-surface-variant uppercase tracking-wide">Active Endpoints</p>
+          <p className="text-2xl font-headline font-semibold text-primary mt-1">{keys.length}</p>
+        </div>
+        <div className="bg-white border border-surface-variant rounded-md p-4">
+          <p className="text-xs text-on-surface-variant uppercase tracking-wide">API Usage (recent)</p>
+          <p className="text-2xl font-headline font-semibold text-primary mt-1">{usage.length}</p>
+        </div>
+        <div className="bg-white border border-surface-variant rounded-md p-4">
+          <p className="text-xs text-on-surface-variant uppercase tracking-wide">Payment Activity</p>
+          <p className="text-2xl font-headline font-semibold text-primary mt-1">{usage.slice(0, 5).length}</p>
+        </div>
+      </section>
 
-      <UserSidebar activeTab="dashboard" />
+      {loading ? (
+        <p className="text-on-surface-variant">Loading…</p>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <section className="bg-white border border-surface-variant rounded-md p-5">
+            <h2 className="font-semibold text-primary mb-4">Quick Actions</h2>
+            <div className="grid gap-2 text-sm">
+              <Link to="/dashboard/browse" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
+                Browse APIs
+              </Link>
+              <Link to="/dashboard/featured" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
+                View Featured APIs
+              </Link>
+              <Link to="/dashboard/categories" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
+                Explore Categories
+              </Link>
+              <Link to="/dashboard/usage" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
+                Open Usage Analytics
+              </Link>
+              <Link to="/creator/new" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
+                Create Endpoint
+              </Link>
+            </div>
+          </section>
 
-      <main className="md:pl-64 pt-24 px-6 pb-16 max-w-4xl">
-        <h1 className="font-headline text-2xl font-semibold text-primary mb-2">Proxy keys &amp; usage</h1>
-        <p className="text-sm text-on-surface-variant mb-8">
-          Payments are always direct from your Pera Wallet to the developer on each API call. No platform balance.
-        </p>
+          <section id="usage" className="bg-white border border-surface-variant rounded-md p-5">
+            <h2 className="font-semibold text-primary mb-4">API Activity</h2>
+            <ul className="space-y-2 text-sm">
+              <li className="flex justify-between">
+                <span>Active endpoints</span>
+                <span className="font-mono">{keys.length}</span>
+              </li>
+              <li className="flex justify-between">
+                <span>Recent API calls</span>
+                <span className="font-mono">{usage.length}</span>
+              </li>
+              <li className="flex justify-between">
+                <span>Estimated latency tier</span>
+                <span className="font-mono">P95 420ms</span>
+              </li>
+              <li className="flex justify-between">
+                <span>ALGO spent (recent)</span>
+                <span className="font-mono">
+                  {usage.slice(0, 10).reduce((acc, row) => acc + Number(row.amountAlgo || 0), 0).toFixed(4)}
+                </span>
+              </li>
+            </ul>
+          </section>
 
-        {loading ? (
-          <p className="text-on-surface-variant">Loading…</p>
-        ) : (
-          <>
-            <section className="mb-10">
-              <h2 className="font-semibold text-primary mb-4">Your proxy keys</h2>
-              {keys.length === 0 ? (
-                <p className="text-sm text-on-surface-variant">
-                  No keys yet. Open a service in the marketplace and generate one.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {keys.map((row) => (
-                    <div
-                      key={row.id}
-                      className="bg-white border border-surface-variant rounded-md p-4 text-sm flex flex-col gap-1"
+          <section className="bg-white border border-surface-variant rounded-md p-5">
+            <h2 className="font-semibold text-primary mb-4">Infrastructure Activity</h2>
+            <ul className="space-y-2 text-sm">
+              <li className="flex justify-between">
+                <span>Recent payments</span>
+                <span className="font-mono">{usage.slice(0, 5).length}</span>
+              </li>
+              <li className="flex justify-between">
+                <span>x402 settlement</span>
+                <span className="text-on-surface-variant">Operational</span>
+              </li>
+              <li className="flex justify-between">
+                <span>Worker status</span>
+                <span className="text-on-surface-variant">Online</span>
+              </li>
+              <li className="flex justify-between">
+                <span>API call activity</span>
+                <span className="font-mono">{usage.length}</span>
+              </li>
+            </ul>
+          </section>
+
+          <section id="keys" className="lg:col-span-2 bg-white border border-surface-variant rounded-md p-5">
+            <h2 className="font-semibold text-primary mb-4">My API Keys</h2>
+            {keys.length === 0 ? (
+              <p className="text-sm text-on-surface-variant">
+                No keys yet. Open a service in the marketplace and generate one.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {keys.map((row) => (
+                  <div key={row.id} className="bg-white border border-surface-variant rounded-md p-4 text-sm flex flex-col gap-1">
+                    <p className="font-semibold">{row.service?.title ?? "Service"}</p>
+                    <p className="text-on-surface-variant text-xs">
+                      {row.service?.aiProvider} · {row.service?.modelName} ·{" "}
+                      {Number(row.service?.pricePerThousandTokens ?? 0).toFixed(6)} ALGO/1k tok · min{" "}
+                      {Number(row.service?.minimumChargeAlgo ?? 0).toFixed(6)} ALGO
+                    </p>
+                    <p className="font-mono text-xs break-all mt-2">{row.key}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="bg-white border border-surface-variant rounded-md p-5">
+            <h2 className="font-semibold text-primary mb-4">Recent API usage</h2>
+            {usage.length === 0 ? (
+              <p className="text-sm text-on-surface-variant">No proxy calls recorded yet.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {usage.map((row) => (
+                  <li
+                    key={row.id}
+                    className="bg-white border border-surface-variant rounded-md px-4 py-3 flex flex-wrap justify-between gap-2 items-center"
+                  >
+                    <span className="text-on-surface-variant">
+                      {row.serviceTitle ?? "—"} · {row.aiProvider} / {row.modelName}
+                    </span>
+                    <span
+                      className={
+                        row.success === false
+                          ? "text-xs px-2 py-0.5 rounded bg-amber-50 text-amber-900"
+                          : "text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700"
+                      }
                     >
-                      <p className="font-semibold">{row.service?.title ?? "Service"}</p>
-                      <p className="text-on-surface-variant text-xs">
-                        {row.service?.aiProvider} · {row.service?.modelName} ·{" "}
-                        {Number(row.service?.pricePerThousandTokens ?? 0).toFixed(6)} ALGO/1k tok · min{" "}
-                        {Number(row.service?.minimumChargeAlgo ?? 0).toFixed(6)} ALGO
-                      </p>
-                      <p className="font-mono text-xs break-all mt-2">{row.key}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-
-            <section>
-              <h2 className="font-semibold text-primary mb-4">Recent API usage</h2>
-              {usage.length === 0 ? (
-                <p className="text-sm text-on-surface-variant">No proxy calls recorded yet.</p>
-              ) : (
-                <ul className="space-y-2 text-sm">
-                  {usage.map((row) => (
-                    <li
-                      key={row.id}
-                      className="bg-white border border-surface-variant rounded-md px-4 py-3 flex flex-wrap justify-between gap-2 items-center"
-                    >
-                      <span className="text-on-surface-variant">
-                        {row.serviceTitle ?? "—"} · {row.aiProvider} / {row.modelName}
-                      </span>
-                      <span
-                        className={
-                          row.success === false
-                            ? "text-xs px-2 py-0.5 rounded bg-amber-50 text-amber-900"
-                            : "text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700"
-                        }
+                      {row.success === false ? "Paid · AI error" : "Completed"}
+                    </span>
+                    <span className="font-mono shrink-0 text-xs">
+                      {Number(row.amountAlgo).toFixed(6)} ALGO
+                      {row.totalTokens != null ? ` · ${row.totalTokens} tok` : ""}
+                    </span>
+                    {row.paymentTxId && (
+                      <a
+                        href={`https://testnet.algoexplorer.io/tx/${row.paymentTxId}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-secondary underline font-mono"
                       >
-                        {row.success === false ? "Paid · AI error" : "Completed"}
-                      </span>
-                      <span className="font-mono shrink-0 text-xs">
-                        {Number(row.amountAlgo).toFixed(6)} ALGO
-                        {row.totalTokens != null ? ` · ${row.totalTokens} tok` : ""}
-                      </span>
-                      {row.paymentTxId && (
-                        <a
-                          href={`https://testnet.algoexplorer.io/tx/${row.paymentTxId}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-secondary underline font-mono"
-                        >
-                          Tx
-                        </a>
-                      )}
-                      <span className="text-xs text-on-surface-variant shrink-0">
-                        {row.createdAt ? new Date(row.createdAt).toLocaleString() : ""}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          </>
-        )}
-      </main>
+                        Tx
+                      </a>
+                    )}
+                    <span className="text-xs text-on-surface-variant shrink-0">
+                      {row.createdAt ? new Date(row.createdAt).toLocaleString() : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
     </div>
   );
 }

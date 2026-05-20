@@ -1,11 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import UserLiveWalletBar from "../components/UserLiveWalletBar.jsx";
-import ProfileDropdown from "../components/ProfileDropdown.jsx";
-import UserSidebar from "../components/UserSidebar.jsx";
 import { useTokenEstimate } from "../hooks/useTokenEstimate.js";
 
 // ── Inline bar chart (no external dep) ───────────────────────────────────────
@@ -131,7 +127,7 @@ function Skeleton({ className = "" }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function PredictionDashboard() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
 
   const [usage, setUsage] = useState(null);
   const [historyData, setHistoryData] = useState(null);
@@ -173,29 +169,7 @@ export default function PredictionDashboard() {
   const noHistory = usage?.error?.includes("Not enough");
 
   return (
-    <div className="bg-surface font-body text-on-surface antialiased min-h-screen">
-
-      {/* ── Header ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-surface-container-high px-6 py-3 flex justify-between items-center h-16">
-        <div className="flex items-center gap-4">
-          <Link to="/" className="font-headline font-semibold text-xl tracking-tighter text-primary">
-            Sentinal
-          </Link>
-          <span className="bg-secondary text-white text-[10px] px-2 py-0.5 rounded-sm font-bold uppercase tracking-wider">
-            Analytics
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          {user?.walletAddress && <UserLiveWalletBar walletAddress={user.walletAddress} />}
-          <ProfileDropdown />
-        </div>
-      </header>
-
-      {/* ── Sidebar ── */}
-      <UserSidebar activeTab="analytics" />
-
-      {/* ── Main ── */}
-      <main className="md:pl-64 pt-24 px-6 pb-16 max-w-6xl">
+    <div className="max-w-6xl">
 
         {/* Page title + cost preview + controls */}
         <div className="flex flex-col gap-6 mb-8">
@@ -433,7 +407,6 @@ export default function PredictionDashboard() {
             )}
           </div>
         )}
-      </main>
     </div>
   );
 }

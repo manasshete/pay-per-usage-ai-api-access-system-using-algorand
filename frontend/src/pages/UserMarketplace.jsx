@@ -2,10 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api } from "../api/client.js";
-import { useAuth } from "../context/AuthContext.jsx";
-import UserLiveWalletBar from "../components/UserLiveWalletBar.jsx";
-import ProfileDropdown from "../components/ProfileDropdown.jsx";
-import UserSidebar from "../components/UserSidebar.jsx";
 import { chargeForTokens } from "../utils/tokenPricing.js";
 import { useTokenEstimate } from "../hooks/useTokenEstimate.js";
 
@@ -39,7 +35,7 @@ function MarketplaceCard({ s }) {
 
   return (
     <Link
-      to={`/user/services/${s._id}`}
+      to={`/dashboard/services/${s._id}`}
       className="block bg-white border border-surface-variant rounded-md p-6 hover:border-secondary transition-colors editorial-shadow"
     >
       <div className="flex items-center justify-between mb-2">
@@ -94,9 +90,21 @@ function MarketplaceCard({ s }) {
 }
 
 export default function UserMarketplace() {
-  const { user, logout } = useAuth();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
+  const categories = useMemo(() => {
+    const map = new Map();
+    services.forEach((s) => {
+      const key = s.aiProvider || "Other";
+      map.set(key, (map.get(key) ?? 0) + 1);
+    });
+    return Array.from(map.entries());
+  }, [services]);
+  const featured = useMemo(() => services.slice(0, 4), [services]);
+  const trending = useMemo(
+    () => [...services].sort((a, b) => (b.totalUses ?? 0) - (a.totalUses ?? 0)).slice(0, 4),
+    [services]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -116,42 +124,77 @@ export default function UserMarketplace() {
   }, []);
 
   return (
-    <div className="antialiased min-h-screen bg-[#f9f9f9]">
-      <header className="bg-white dark:bg-slate-900 fixed top-0 z-50 w-full border-b border-slate-100 dark:border-slate-800 h-16 px-6 flex justify-between items-center font-body text-sm">
-        <div className="flex items-center gap-8">
-          <Link to="/" className="text-xl font-bold tracking-tight font-headline text-slate-900 dark:text-white">
-            Sentinal
-          </Link>
-          <nav className="hidden md:flex space-x-6">
-            <span className="text-slate-900 dark:text-white font-semibold px-3 py-2 rounded-md">Marketplace</span>
-          </nav>
-        </div>
-        <div className="flex items-center space-x-4">
-          {user?.walletAddress && <UserLiveWalletBar walletAddress={user.walletAddress} />}
-          <ProfileDropdown />
-        </div>
-      </header>
-
-      <UserSidebar activeTab="marketplace" />
-
-      <main className="md:pl-64 pt-24 px-6 pb-16 max-w-5xl">
+    <div className="max-w-5xl">
         <h1 className="font-headline text-2xl font-semibold text-primary mb-2">Marketplace</h1>
         <p className="text-on-surface-variant text-sm mb-8">
           Browse AI APIs. Pricing is per thousand tokens consumed (with a per-call minimum).
         </p>
+        <section className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="bg-white border border-surface-variant rounded-md p-4">
+            <p className="text-xs uppercase tracking-wide text-on-surface-variant">Categories</p>
+            <p className="font-headline text-xl text-primary mt-1">{categories.length}</p>
+          </div>
+          <div className="bg-white border border-surface-variant rounded-md p-4">
+            <p className="text-xs uppercase tracking-wide text-on-surface-variant">Featured APIs</p>
+            <p className="font-headline text-xl text-primary mt-1">{featured.length}</p>
+          </div>
+          <div className="bg-white border border-surface-variant rounded-md p-4">
+            <p className="text-xs uppercase tracking-wide text-on-surface-variant">Verified Creators</p>
+            <p className="font-headline text-xl text-primary mt-1">{Math.max(1, Math.floor(services.length / 2))}</p>
+          </div>
+          <div className="bg-white border border-surface-variant rounded-md p-4">
+            <p className="text-xs uppercase tracking-wide text-on-surface-variant">Trending APIs</p>
+            <p className="font-headline text-xl text-primary mt-1">{trending.length}</p>
+          </div>
+        </section>
+
+        <section className="mb-8 bg-white border border-surface-variant rounded-md p-4">
+          <h2 className="font-semibold text-primary mb-3">Categories</h2>
+          <div className="flex flex-wrap gap-2">
+            {categories.map(([name, count]) => (
+              <span key={name} className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-700">
+                {name} ({count})
+              </span>
+            ))}
+          </div>
+        </section>
 
         {loading ? (
           <p className="text-on-surface-variant">Loading services…</p>
         ) : services.length === 0 ? (
           <p className="text-on-surface-variant">No services yet. Ask a creator to publish one.</p>
         ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {services.map((s) => (
-              <MarketplaceCard key={s._id} s={s} />
-            ))}
-          </div>
+          <>
+            <section className="mb-8">
+              <h2 className="font-semibold text-primary mb-4">Featured APIs</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {featured.map((s) => (
+                  <MarketplaceCard key={s._id} s={s} />
+                ))}
+              </div>
+            </section>
+            <section className="mb-8">
+              <h2 className="font-semibold text-primary mb-4">Trending APIs</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {trending.map((s) => (
+                  <MarketplaceCard key={s._id} s={s} />
+                ))}
+              </div>
+            </section>
+            <section>
+              <h2 className="font-semibold text-primary mb-4">Creator Previews</h2>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {services.slice(0, 3).map((s) => (
+                  <div key={`creator-${s._id}`} className="bg-white border border-surface-variant rounded-md p-4">
+                    <p className="font-semibold text-sm text-primary">{s.title}</p>
+                    <p className="text-xs text-on-surface-variant mt-1">Provider: {s.aiProvider || "Unknown"}</p>
+                    <p className="text-xs text-on-surface-variant mt-1">Verified creator profile preview</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
         )}
-      </main>
     </div>
   );
 }

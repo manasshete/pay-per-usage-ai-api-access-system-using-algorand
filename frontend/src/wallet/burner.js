@@ -34,7 +34,7 @@ export async function syncBurnerWallet(mnemonic) {
   try {
     const m = mnemonic || localStorage.getItem(BURNER_WALLET_KEY);
     if (!m) return;
-    await api.post("/profile/burner", { mnemonic: m });
+    await api.post("/api/profile/burner", { mnemonic: m });
   } catch (err) {
     console.error("Failed to sync burner wallet to profile:", err);
   }
@@ -42,7 +42,7 @@ export async function syncBurnerWallet(mnemonic) {
 
 export async function fetchBurnerWallet() {
   try {
-    const res = await api.get("/profile/burner");
+    const res = await api.get("/api/profile/burner");
     if (res.data?.mnemonic) {
       localStorage.setItem(BURNER_WALLET_KEY, res.data.mnemonic);
       return res.data.mnemonic;

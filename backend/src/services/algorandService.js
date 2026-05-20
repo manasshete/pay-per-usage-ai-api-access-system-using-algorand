@@ -4,6 +4,7 @@ let indexerClient;
 
 function getIndexerServer() {
   return (
+    process.env.ALGO_INDEXER_URL ||
     process.env.INDEXER_SERVER ||
     process.env.ALGORAND_INDEXER ||
     "https://testnet-idx.algonode.cloud"

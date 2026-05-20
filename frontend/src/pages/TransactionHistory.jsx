@@ -1,16 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
-import UserLiveWalletBar from "../components/UserLiveWalletBar.jsx";
-import ProfileDropdown from "../components/ProfileDropdown.jsx";
-import UserSidebar from "../components/UserSidebar.jsx";
+import { useEffect, useMemo, useState } from "react";
 
 const EXPLORER_TX = "https://testnet.algoexplorer.io/tx/";
 
 export default function TransactionHistory() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [summary, setSummary] = useState({ totalCalls: 0, totalTokensConsumed: 0, totalAlgoSpent: 0 });
   const [services, setServices] = useState([]);
@@ -52,23 +49,14 @@ export default function TransactionHistory() {
   }, [query]);
 
   return (
-    <div className="antialiased min-h-screen bg-[#f9f9f9]">
-      <header className="bg-white fixed top-0 z-50 w-full border-b border-slate-100 h-16 px-6 flex justify-between items-center font-body text-sm">
-        <div className="flex items-center gap-6">
-          <Link to="/user/marketplace" className="text-secondary hover:underline">
+    <div className="max-w-6xl mx-auto">
+        <div className="flex flex-wrap items-center gap-3 mb-6">
+          <Link to="/dashboard/browse" className="text-secondary hover:underline text-sm">
             ← Marketplace
           </Link>
-          <span className="font-headline font-semibold text-primary">Transaction history</span>
+          <span className="font-headline font-semibold text-primary">Billing &amp; transactions</span>
         </div>
-        <div className="flex items-center gap-4">
-          {user?.walletAddress && <UserLiveWalletBar walletAddress={user.walletAddress} />}
-          <ProfileDropdown />
-        </div>
-      </header>
 
-      <UserSidebar activeTab="transactions" />
-
-      <main className="md:pl-64 pt-24 px-4 sm:px-6 pb-24 max-w-6xl mx-auto">
         <div className="flex flex-wrap gap-3 mb-6 items-end">
           <div>
             <label className="block text-xs text-on-surface-variant mb-1">Service</label>
@@ -192,7 +180,6 @@ export default function TransactionHistory() {
             )}
           </table>
         </div>
-      </main>
     </div>
   );
 }

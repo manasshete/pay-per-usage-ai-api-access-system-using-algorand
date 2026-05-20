@@ -1,9 +1,9 @@
 import crypto from "crypto";
 
 function deriveKey() {
-  const raw = process.env.ENCRYPTION_KEY || "";
+  const raw = process.env.ENCRYPTION_SECRET || process.env.ENCRYPTION_KEY || "";
   if (!raw) {
-    throw new Error("ENCRYPTION_KEY is not set");
+    throw new Error("ENCRYPTION_SECRET or ENCRYPTION_KEY is not set");
   }
   return crypto.createHash("sha256").update(raw, "utf8").digest();
 }
