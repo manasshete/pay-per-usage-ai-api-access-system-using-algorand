@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 const AuthContext = createContext(null);
 
 const STORAGE_KEY = "sentinal_chat_token";
-const SENTINAL_API_URL = import.meta.env.VITE_SENTINEL_API_URL || (import.meta.env.DEV ? "http://localhost:5000" : "https://sentinal-z3ue.onrender.com");
+const SENTINAL_API_URL = import.meta.env.VITE_SENTINEL_API_URL || (import.meta.env.DEV ? "http://localhost:5000" : "https://sentinal-j4ox.onrender.com");
 
 // Chat backend API instance — uses /api (same-origin) in production
 export const api = axios.create({
@@ -15,9 +15,9 @@ export const api = axios.create({
     ? (import.meta.env.VITE_CHAT_BACKEND_URL.endsWith('/api') ? import.meta.env.VITE_CHAT_BACKEND_URL : `${import.meta.env.VITE_CHAT_BACKEND_URL}/api`)
     : (import.meta.env.DEV
         ? "http://localhost:4000/api"
-        : (typeof window !== 'undefined' && window.location.origin.includes('sentinal-chat1')
+        : (typeof window !== 'undefined' && (window.location.origin.includes('sentinal-chat1') || window.location.origin.includes('zrgu'))
             ? "/api"
-            : "https://sentinal-chat1.onrender.com/api"
+            : "https://pay-per-usage-ai-api-access-system-using-zrgu.onrender.com/api"
           )
       ),
 });
