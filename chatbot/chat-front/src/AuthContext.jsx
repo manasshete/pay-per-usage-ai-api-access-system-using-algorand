@@ -11,7 +11,7 @@ const SENTINAL_API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 
 // Chat backend API instance
 export const api = axios.create({
-  baseURL: "http://localhost:4000/api", // Chat Backend URL
+  baseURL: import.meta.env.VITE_CHAT_API_URL || "http://localhost:4000/api", // Chat Backend URL
 });
 
 export function AuthProvider({ children }) {
