@@ -31,6 +31,7 @@ const allowedOrigins = [
   process.env.CHAT_FRONTEND_ORIGIN,   // chat-frontend: https://sentinal-vhat1.onrender.com
   process.env.RENDER_EXTERNAL_URL,
   "https://sentinal-j4ox.onrender.com",
+  "https://chat-front-blond.vercel.app",
   "http://localhost:5174",
   "http://localhost:5175",
   "http://localhost:5176",

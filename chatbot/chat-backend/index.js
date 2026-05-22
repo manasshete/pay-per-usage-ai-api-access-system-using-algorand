@@ -27,6 +27,7 @@ app.use((req, res, next) => {
 // ── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.ALLOWED_ORIGIN,
+  'https://chat-front-blond.vercel.app',
   'http://localhost:5555',
   'http://localhost:5173',
 ].filter(Boolean)
