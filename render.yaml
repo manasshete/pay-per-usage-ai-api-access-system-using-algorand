@@ -29,7 +29,7 @@ services:
       - key: VITE_SENTINEL_MARKETPLACE_URL
         sync: false
       - key: VITE_CHAT_BACKEND_URL
-        sync: false
+        value: ""
       - key: VITE_CHATBOT_URL
         sync: false
       - key: VITE_SENTINEL_API_URL

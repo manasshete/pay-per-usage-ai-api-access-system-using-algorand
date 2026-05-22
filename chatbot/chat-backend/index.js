@@ -17,6 +17,13 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 const isProd = process.env.NODE_ENV === "production";
 
+// Fix Cross-Origin-Opener-Policy for Firebase Auth popups
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups')
+  res.setHeader('Cross-Origin-Embedder-Policy', 'unsafe-none')
+  next()
+})
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.ALLOWED_ORIGIN,
@@ -58,18 +65,24 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok", service: "Sentinal Chat API" });
 });
 
-// ── Static Frontend (production only) ────────────────────────────────────────
+// ── Static Frontend ─────────────────────────────────────────────────────────
 const distPath = path.join(__dirname, '../chat-front/dist')
+app.use(express.static(distPath))
 
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(distPath))
-  // catch-all: serve index.html for any non-API route
-  app.get('*', (req, res) => {
-    if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(distPath, 'index.html'))
+// SPA catch-all — serve index.html for all non-API routes
+// This fixes 404 on /login, /dashboard, /settings etc.
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next()
+  }
+  const indexPath = path.join(__dirname, '../chat-front/dist', 'index.html')
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error('Failed to serve index.html:', err)
+      res.status(500).json({ error: 'Could not load app' })
     }
   })
-}
+})
 
 // ── Error handler ─────────────────────────────────────────────────────────────
 app.use((err, _req, res, _next) => {
