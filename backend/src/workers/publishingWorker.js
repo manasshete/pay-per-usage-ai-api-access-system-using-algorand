@@ -103,8 +103,13 @@ export function startPublishingWorker() {
     { connection: redis, concurrency: 2 }
   );
 
+  let lastWorkerErrorLogged = 0;
   worker.on("error", (err) => {
-    console.error("[Worker] Redis connection error:", err.message);
+    const now = Date.now();
+    if (now - lastWorkerErrorLogged > 10000) {
+      console.error("[Worker] Redis connection error:", err.message);
+      lastWorkerErrorLogged = now;
+    }
   });
 
   worker.on("failed", (job, err) => {
