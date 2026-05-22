@@ -28,9 +28,11 @@ app.use((req, res, next) => {
 const allowedOrigins = [
   process.env.ALLOWED_ORIGIN,
   'https://chat-front-blond.vercel.app',
-  'https://pay-per-usage-ai-api-access-system-using-zrgu.onrender.com',
+  'https://sentinal-j4ox.onrender.com',
+  'https://sentinal-z3ue.onrender.com',
   'https://sentinal-vhat1.onrender.com',
   'https://sentinal-chat1.onrender.com',
+  'https://pay-per-usage-ai-api-access-system-using-zrgu.onrender.com',
   'http://localhost:5555',
   'http://localhost:5173',
 ].filter(Boolean)

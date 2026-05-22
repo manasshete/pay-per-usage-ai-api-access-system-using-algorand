@@ -31,10 +31,11 @@ const allowedOrigins = [
   process.env.CHAT_FRONTEND_ORIGIN,   // chat-frontend: https://sentinal-vhat1.onrender.com
   process.env.RENDER_EXTERNAL_URL,
   "https://sentinal-j4ox.onrender.com",
-  "https://pay-per-usage-ai-api-access-system-using-zrgu.onrender.com",
-  "https://chat-front-blond.vercel.app",
+  "https://sentinal-z3ue.onrender.com",
   "https://sentinal-vhat1.onrender.com",
   "https://sentinal-chat1.onrender.com",
+  "https://pay-per-usage-ai-api-access-system-using-zrgu.onrender.com",
+  "https://chat-front-blond.vercel.app",
   "http://localhost:5174",
   "http://localhost:5175",
   "http://localhost:5176",
