@@ -1,49 +1,40 @@
-# Render Blueprint: two Web Services.
-# 1. sentinel      — Express API + Vite frontend (main app)
-# 2. sentinel-chat — Chat backend + Chat Vite frontend (chatbot)
-# https://render.com/docs/blueprint-spec
 services:
-  - type: web
-    name: sentinel
-    runtime: node
-    plan: free
-    buildCommand: npm install --prefix frontend && NODE_OPTIONS=--max-old-space-size=4096 npm run build --prefix frontend && npm install --prefix backend
-    startCommand: NODE_ENV=production node backend/src/server.js
-    healthCheckPath: /api/health
-    envVars:
-      - key: NODE_VERSION
-        value: "22"
-      - key: MONGODB_URI
-        sync: false
-      - key: JWT_SECRET
-        generateValue: true
-      - key: ENCRYPTION_KEY
-        generateValue: true
-
   - type: web
     name: sentinel-chat
     runtime: node
-    plan: free
+    rootDir: chatbot/chat-backend
     buildCommand: >
-      npm install --prefix chatbot/chat-front &&
-      NODE_OPTIONS=--max-old-space-size=2048 npm run build --prefix chatbot/chat-front &&
-      npm install --prefix chatbot/chat-backend
-    startCommand: NODE_ENV=production node chatbot/chat-backend/index.js
-    healthCheckPath: /health
+      cd ../chat-front &&
+      yarn &&
+      yarn build &&
+      cd ../chat-backend &&
+      npm install
+    startCommand: node index.js
+    healthCheckPath: /api/health
     envVars:
-      - key: NODE_VERSION
-        value: "22"
       - key: NODE_ENV
         value: production
+      - key: PORT
+        value: 10000
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
         sync: false
-      - key: SENTINAL_API_URL
-        sync: false
-      - key: FRONTEND_ORIGIN
-        sync: false
       - key: FIREBASE_PROJECT_ID
         sync: false
-      - key: FIREBASE_SERVICE_ACCOUNT_JSON
+      - key: FIREBASE_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_PRIVATE_KEY
+        sync: false
+      - key: VITE_SENTINEL_MARKETPLACE_URL
+        sync: false
+      - key: VITE_CHAT_BACKEND_URL
+        sync: false
+      - key: VITE_CHATBOT_URL
+        sync: false
+      - key: VITE_SENTINEL_API_URL
+        sync: false
+      - key: SENTINEL_API_URL
+        sync: false
+      - key: ALLOWED_ORIGIN
         sync: false

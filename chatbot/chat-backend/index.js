@@ -18,28 +18,22 @@ const PORT = process.env.PORT || 4000;
 const isProd = process.env.NODE_ENV === "production";
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
-// In production the frontend is served from the same origin so CORS only needs
-// to allow the main Sentinel marketplace backend to call this service.
 const allowedOrigins = [
-  process.env.FRONTEND_ORIGIN,          // main marketplace (set in Render)
-  process.env.RENDER_EXTERNAL_URL,      // this service's own Render URL
-  "http://localhost:5173",
-  "http://localhost:5555",
-  "http://localhost:4000",
-].filter(Boolean);
+  process.env.ALLOWED_ORIGIN,
+  'http://localhost:5555',
+  'http://localhost:5173',
+].filter(Boolean)
 
-app.use(
-  cors({
-    origin: isProd
-      ? (origin, cb) => {
-          // Same-origin requests (no Origin header) are always ok
-          if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-          cb(new Error(`CORS: ${origin} not allowed`));
-        }
-      : "*",
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error(`CORS blocked: ${origin}`))
+    }
+  },
+  credentials: true,
+}))
 
 app.use(express.json());
 app.use(morgan(isProd ? "combined" : "dev"));
@@ -52,6 +46,11 @@ mongoose
   .then(() => console.log("Connected to Chat MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
+// ── Health Check ─────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok' })
+})
+
 // ── API Routes ────────────────────────────────────────────────────────────────
 app.use("/api", chatRoutes);
 
@@ -60,15 +59,16 @@ app.get("/health", (_req, res) => {
 });
 
 // ── Static Frontend (production only) ────────────────────────────────────────
-if (isProd) {
-  const dist = path.join(__dirname, "..", "chat-front", "dist");
-  app.use(express.static(dist, { index: false }));
-  app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api") || req.path === "/health") return next();
-    res.sendFile(path.join(dist, "index.html"), (err) => {
-      if (err) next(err);
-    });
-  });
+const distPath = path.join(__dirname, '../chat-front/dist')
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(distPath))
+  // catch-all: serve index.html for any non-API route
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(distPath, 'index.html'))
+    }
+  })
 }
 
 // ── Error handler ─────────────────────────────────────────────────────────────

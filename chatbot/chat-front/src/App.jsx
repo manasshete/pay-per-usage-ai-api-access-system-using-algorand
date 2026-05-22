@@ -5,7 +5,7 @@ import { AuthProvider, useAuth, api } from './AuthContext';
 import './style.css';
 
 // Production URL of the main Sentinel marketplace
-const SENTINAL_MARKETPLACE_URL = import.meta.env.VITE_SENTINAL_MARKETPLACE_URL || 'http://localhost:5173';
+const SENTINAL_MARKETPLACE_URL = import.meta.env.VITE_SENTINEL_MARKETPLACE_URL || 'http://localhost:5173';
 
 /* ── SVG helpers ── */
 const IconShield = () => (
