@@ -278,42 +278,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Future Business Model - Chatbot Redirect */}
-        <section className="max-w-[1100px] mx-auto px-8 py-12 mb-8">
-          <div className="bg-[#031634] relative overflow-hidden rounded-[32px] p-8 md:p-14 flex flex-col md:flex-row items-center justify-between gap-10 shadow-2xl">
-            {/* Background glowing effects */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/20 blur-[120px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
-            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-500/20 blur-[100px] rounded-full pointer-events-none translate-y-1/3 -translate-x-1/4"></div>
-            
-            <div className="flex flex-col gap-6 max-w-2xl z-10">
-              <div className="flex items-center gap-3">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
-                <span className="font-body text-[11px] font-bold tracking-[0.2em] text-emerald-400 uppercase">
-                  Live Technical Demonstration
-                </span>
-              </div>
-              <h2 className="font-headline text-3xl md:text-5xl font-bold text-white leading-tight tracking-tight">
-                The Future of <br className="hidden md:block"/> AI Monetization.
-              </h2>
-              <p className="font-body text-slate-300 text-lg leading-relaxed md:pr-12">
-                Talk to our autonomous Sentinel Chatbot to experience frictionless pay-per-use inference. Watch how micro-transactions flow seamlessly on the Algorand blockchain in real-time.
-              </p>
-            </div>
-            
-            <a 
-              href={import.meta.env.VITE_CHATBOT_URL || "https://chat-front-blond.vercel.app/"} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="group flex items-center justify-center gap-3 bg-white text-[#031634] hover:bg-slate-100 px-8 py-5 rounded-2xl font-bold hover:scale-105 transition-all duration-300 shrink-0 z-10 shadow-[0_0_40px_rgba(255,255,255,0.1)] w-full md:w-auto text-lg"
-            >
-              <span className="material-symbols-outlined text-2xl text-emerald-600 group-hover:scale-110 transition-transform">forum</span>
-              <span>Launch Sentinel Chat</span>
-            </a>
-          </div>
-        </section>
+
 
         <section id="marketplace" className="max-w-[1100px] mx-auto px-8 pb-4 grid gap-4 md:grid-cols-2 scroll-mt-20">
           <div className="bg-white border border-slate-200 rounded-2xl p-6">
