@@ -23,29 +23,34 @@ import devRoutes from "./routes/dev.js";
 import studioRoutes from "./routes/studio.routes.js";
 import x402Routes from "./routes/x402.js";
 import { startPublishingWorker } from "./workers/publishingWorker.js";
+import { startScheduledPublishScheduler } from "./services/scheduledPublishScheduler.js";
+import { loadClipCraftConfig } from "./studio/clipcraft/config/loadConfig.js";
+import { getClipCraftRuntime } from "./studio/clipcraft/production/ClipCraftRuntime.js";
+import { registerClipCraftGracefulShutdown } from "./studio/clipcraft/production/gracefulShutdown.js";
+import { buildCorsOrigins, isCorsOriginAllowed } from "./config/corsOrigins.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const allowedOrigins = [
-  process.env.FRONTEND_ORIGIN || "http://localhost:5173",
-  process.env.FRONTEND_URL,
-  process.env.RENDER_EXTERNAL_URL,
-  process.env.CHAT_FRONTEND_ORIGIN,
-  "https://chat-front-blond.vercel.app",
-  "http://localhost:5174",
-  "http://localhost:5175",
-  "http://localhost:5176",
-  "http://localhost:5177",
-  "http://localhost:5555",
-  "http://localhost:4000"
-].filter(Boolean);
+const allowedOrigins = buildCorsOrigins();
 
-app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+  // Firebase Google Sign-In popup requires unsafe-none or false so the
+  // popup can call window.opener to deliver the OAuth token back to the app.
+  // Helmet's default "same-origin" silently blocks this and causes COOP errors.
+  crossOriginOpenerPolicy: { policy: "unsafe-none" },
+}));
 app.use(
   cors({
-    origin: allowedOrigins,
+    origin(origin, callback) {
+      if (isCorsOriginAllowed(origin, allowedOrigins)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked origin: ${origin}`));
+      }
+    },
     credentials: true,
   })
 );
@@ -84,7 +89,7 @@ app.use("/api", (_req, res) => {
 if (process.env.NODE_ENV === "production") {
   const dist = path.join(__dirname, "..", "..", "frontend", "dist");
   app.use(express.static(dist, { index: false }));
-  app.get("*", (req, res, next) => {
+  app.get('*', (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
     res.sendFile(path.join(dist, "index.html"), (err) => {
       if (err) next(err);
@@ -115,8 +120,29 @@ connectDb()
     } catch (e) {
       console.warn("[publishingWorker] failed to start:", e.message);
     }
+    try {
+      startScheduledPublishScheduler();
+    } catch (e) {
+      console.warn("[scheduler] failed to start:", e.message);
+    }
+    let clipcraftRuntime = null;
+    try {
+      const cc = loadClipCraftConfig();
+      if (cc.enabled) {
+        clipcraftRuntime = getClipCraftRuntime();
+        clipcraftRuntime.start();
+        console.log("[clipcraft] runtime started (provider:", cc.providerMode + ")");
+      }
+    } catch (e) {
+      console.warn("[clipcraft] runtime skip:", e.message);
+    }
+
     const server = app.listen(port, () => {
       console.log(`API listening on ${port}`);
+    });
+
+    registerClipCraftGracefulShutdown(server, clipcraftRuntime, {
+      timeoutMs: Number(process.env.CLIPCRAFT_SHUTDOWN_TIMEOUT_MS) || 30_000,
     });
     server.on("error", (err) => {
       if (err.code === "EADDRINUSE") {
