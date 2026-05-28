@@ -20,7 +20,7 @@ export default function UserSidebar({ activeTab }) {
         { label: "My API Keys", path: "/dashboard/keys" },
         { label: "Usage", path: "/dashboard/usage" },
         { label: "Transactions", path: "/billing/transactions" },
-        { label: "x402 Agentic Docs", path: "/dashboard/x402" },
+        { label: "x402 Agentic Docs", path: "/docs/x402" },
       ],
     },
     {

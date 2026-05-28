@@ -1,15 +1,13 @@
 import React from "react";
-import logo from "../assets/logo.png";
-import { useNavigate, Link, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useEffect, useState } from "react";
 import ContractStats from "../components/ContractStats.jsx";
-import ProfileDropdown from "../components/ProfileDropdown.jsx";
 import { connectPera } from "../wallet/pera.js";
 import { api } from "../api/client.js";
 import HowItWorks from "../components/HowItWorks.jsx";
-import { goToHomeSection } from "../utils/scrollToSection.js";
+import MegaNav from "../components/MegaNav.jsx";
 
 export default function Home() {
   const navigate = useNavigate();
@@ -136,48 +134,9 @@ export default function Home() {
 
   return (
     <div className="bg-surface selection:bg-secondary-container selection:text-on-secondary-container min-h-screen">
-      <header className="bg-[#F9F9F9] dark:bg-[#1A1C1C] flex justify-between items-center w-full px-8 h-16 max-w-screen-2xl mx-auto top-0 sticky z-50">
-        <div className="flex items-center gap-12">
-          <Link to="/" className="flex items-center gap-2 text-xl font-semibold text-[#031634] dark:text-white tracking-tighter font-headline">
-            <img src={logo} alt="Sentinel Logo" className="w-8 h-8 rounded-lg object-contain bg-white p-0.5 border border-slate-200" />
-            <span>Sentinal</span>
-          </Link>
-          <nav className="hidden md:flex items-center gap-8">
-            <button
-              type="button"
-              onClick={() => goToHomeSection(navigate, "how-it-works")}
-              className="text-[#5A5A5A] dark:text-[#A0A0A0] text-sm font-medium font-body hover:text-[#031634] dark:hover:text-white transition-colors cursor-pointer"
-            >
-              How It Works
-            </button>
-            <button
-              type="button"
-              onClick={() => goToHomeSection(navigate, "marketplace")}
-              className="text-[#5A5A5A] dark:text-[#A0A0A0] text-sm font-medium font-body hover:text-[#031634] dark:hover:text-white transition-colors cursor-pointer"
-            >
-              Marketplace
-            </button>
-            <button
-              type="button"
-              onClick={() => goToHomeSection(navigate, "studio")}
-              className="text-[#5A5A5A] dark:text-[#A0A0A0] text-sm font-medium font-body hover:text-[#031634] dark:hover:text-white transition-colors cursor-pointer"
-            >
-              Studio
-            </button>
-          </nav>
-        </div>
-        <div className="flex items-center gap-4">
-          {isAuthenticated ? (
-            <ProfileDropdown />
-          ) : (
-            <span className="text-xs font-semibold text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1.5 rounded-full uppercase tracking-wider font-body">
-              Pera Wallet
-            </span>
-          )}
-        </div>
-      </header>
+      <MegaNav enterWithPera={enterWithPera} />
 
-      <main>
+      <main className="pt-14">
         <HowItWorks enterWithPera={enterWithPera} />
 
         <section className="max-w-[1100px] mx-auto px-8 pt-16 pb-16">
@@ -213,42 +172,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Future Business Model - Chatbot Redirect */}
-        <section className="max-w-[1100px] mx-auto px-8 py-12 mb-8">
-          <div className="bg-[#031634] relative overflow-hidden rounded-[32px] p-8 md:p-14 flex flex-col md:flex-row items-center justify-between gap-10 shadow-2xl">
-            {/* Background glowing effects */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/20 blur-[120px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/3"></div>
-            <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-500/20 blur-[100px] rounded-full pointer-events-none translate-y-1/3 -translate-x-1/4"></div>
-            
-            <div className="flex flex-col gap-6 max-w-2xl z-10">
-              <div className="flex items-center gap-3">
-                <span className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </span>
-                <span className="font-body text-[11px] font-bold tracking-[0.2em] text-emerald-400 uppercase">
-                  Live Technical Demonstration
-                </span>
-              </div>
-              <h2 className="font-headline text-3xl md:text-5xl font-bold text-white leading-tight tracking-tight">
-                The Future of <br className="hidden md:block"/> AI Monetization.
-              </h2>
-              <p className="font-body text-slate-300 text-lg leading-relaxed md:pr-12">
-                Talk to our autonomous Sentinel Chatbot to experience frictionless pay-per-use inference. Watch how micro-transactions flow seamlessly on the Algorand blockchain in real-time.
-              </p>
-            </div>
-            
-            <a 
-              href="https://chat-front-blond.vercel.app/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="group flex items-center justify-center gap-3 bg-white text-[#031634] hover:bg-slate-100 px-8 py-5 rounded-2xl font-bold hover:scale-105 transition-all duration-300 shrink-0 z-10 shadow-[0_0_40px_rgba(255,255,255,0.1)] w-full md:w-auto text-lg"
-            >
-              <span className="material-symbols-outlined text-2xl text-emerald-600 group-hover:scale-110 transition-transform">forum</span>
-              <span>Launch Sentinel Chat</span>
-            </a>
-          </div>
-        </section>
+
 
         <section id="marketplace" className="max-w-[1100px] mx-auto px-8 pb-4 grid gap-4 md:grid-cols-2 scroll-mt-20">
           <div className="bg-white border border-slate-200 rounded-2xl p-6">

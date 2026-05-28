@@ -163,3 +163,5 @@ connectDb()
     console.error(e);
     process.exit(1);
   });
+
+// Trigger nodemon reload for PORT change

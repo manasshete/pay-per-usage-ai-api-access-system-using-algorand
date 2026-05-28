@@ -30,7 +30,7 @@ import rateLimit from "express-rate-limit";
 import mongoose from "mongoose";
 import { Service } from "../models/Service.js";
 import { ApiUsageLog } from "../models/ApiUsageLog.js";
-import { forwardChatCompletion } from "../services/aiProxy.js";
+import { forwardChatCompletion, forwardChatCompletionStream } from "../services/aiProxy.js";
 import {
   extractTokenUsage,
   estimateTokensFromOpenAiMessages,
@@ -98,11 +98,13 @@ async function resolveService(serviceId) {
  * Normalizes the request body into an OpenAI-compatible messages array.
  * Supports both `messages` array and `prompt` string shorthand.
  */
-function normalizeBody(body) {
-  const { prompt, messages, ...rest } = body || {};
-  if (Array.isArray(messages) && messages.length > 0) return { messages, ...rest };
-  if (typeof prompt === "string" && prompt.trim()) {
-    return { messages: [{ role: "user", content: prompt.trim() }], ...rest };
+function normalizeBody(b) {
+  if (!b) return null;
+  if (Array.isArray(b.messages)) {
+    return { messages: b.messages, stream: b.stream };
+  }
+  if (typeof b.prompt === "string") {
+    return { messages: [{ role: "user", content: b.prompt }], stream: b.stream };
   }
   return null;
 }
@@ -278,13 +280,45 @@ router.post("/use/:serviceId", x402RateLimit, async (req, res) => {
   // 7. Call the AI provider
   let aiResponse;
   try {
-    aiResponse = await forwardChatCompletion({
-      provider: service.aiProvider,
-      apiKey: providerKey,
-      model: service.modelName,
-      body: aiBody,
-    });
-    providerKey = null; // clear from memory ASAP
+    if (aiBody.stream) {
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.setHeader(
+        "X-Payment-Response",
+        Buffer.from(
+          JSON.stringify({
+            success: true,
+            txId,
+            chargeAlgo,
+            network: "algorand-testnet",
+          })
+        ).toString("base64")
+      );
+      res.flushHeaders();
+      const streamRes = await forwardChatCompletionStream({
+        provider: service.aiProvider,
+        apiKey: providerKey,
+        model: service.modelName,
+        body: aiBody,
+      }, req, res);
+      providerKey = null; // clear from memory ASAP
+
+      aiResponse = {
+         choices: [{ message: { content: streamRes.content } }],
+         usage: streamRes.usage
+      };
+      
+      // Note: res is already ended by the stream, so we just run the logging logic below without sending another res.json
+    } else {
+      aiResponse = await forwardChatCompletion({
+        provider: service.aiProvider,
+        apiKey: providerKey,
+        model: service.modelName,
+        body: aiBody,
+      });
+      providerKey = null; // clear from memory ASAP
+    }
   } catch (err) {
     providerKey = null;
     console.error("[x402] AI provider error:", err?.message || err);
@@ -310,7 +344,7 @@ router.post("/use/:serviceId", x402RateLimit, async (req, res) => {
     const status = err.status && Number.isFinite(err.status) ? err.status : 502;
     return res.status(status).json({
       error: "Upstream AI provider error",
-      detail: process.env.NODE_ENV === "development" ? err.message : undefined,
+      detail: err.message || String(err),
     });
   }
 
@@ -380,33 +414,35 @@ router.post("/use/:serviceId", x402RateLimit, async (req, res) => {
   }
 
   // 12. Return AI response with x402 receipt headers
-  const ai = aiResponse && typeof aiResponse === "object" ? aiResponse : {};
-  return res
-    .status(200)
-    .set(
-      "X-Payment-Response",
-      Buffer.from(
-        JSON.stringify({
-          success: true,
-          txId,
-          chargeAlgo,
+  if (!res.headersSent) {
+    const ai = aiResponse && typeof aiResponse === "object" ? aiResponse : {};
+    return res
+      .status(200)
+      .set(
+        "X-Payment-Response",
+        Buffer.from(
+          JSON.stringify({
+            success: true,
+            txId,
+            chargeAlgo,
+            network: "algorand-testnet",
+          })
+        ).toString("base64")
+      )
+      .json({
+        ...ai,
+        sentinelReceipt: {
+          paymentProtocol: "x402",
+          paymentTxId: txId,
+          serviceId: service._id,
+          amountAlgo: chargeAlgo,
           network: "algorand-testnet",
-        })
-      ).toString("base64")
-    )
-    .json({
-      ...ai,
-      sentinelReceipt: {
-        paymentProtocol: "x402",
-        paymentTxId: txId,
-        chargeAlgo,
-        promptTokens: usage.promptTokens,
-        completionTokens: usage.completionTokens,
-        totalTokens: usage.totalTokens,
-        userWallet,
-        network: "algorand-testnet",
-      },
-    });
+        },
+      });
+  } else {
+    // If stream was used, just return (the stream has already been ended)
+    return;
+  }
 });
 
 export default router;
