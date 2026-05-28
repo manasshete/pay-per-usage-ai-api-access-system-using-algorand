@@ -4,5 +4,3 @@ node_modules/
 dist/
 build/
 .vercel/
-chatbot/chat-front/node_modules/
-chatbot/chat-backend/node_modules/
