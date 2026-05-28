@@ -588,7 +588,9 @@
         const params = await algodClient.getTransactionParams().do();
         
         const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+          from: currentAccount.addr,
           sender: currentAccount.addr,
+          to: payToAddress,
           receiver: payToAddress,
           amount: amountMicroAlgos,
           suggestedParams: params,
