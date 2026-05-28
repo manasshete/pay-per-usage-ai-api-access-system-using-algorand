@@ -189,7 +189,8 @@ export async function verifyX402Payment({ payload, expectedReceiver, expectedMic
     }
 
     // 6. Verify receiver = creator wallet
-    const txReceiver = normalizeAlgoAddress(innerTxn.to ? innerTxn.to.toString() : "");
+    const receiverObj = innerTxn.payment?.receiver || innerTxn.to;
+    const txReceiver = normalizeAlgoAddress(receiverObj ? receiverObj.toString() : "");
     const expectedReceiverN = normalizeAlgoAddress(expectedReceiver);
     if (txReceiver !== expectedReceiverN) {
       return {
@@ -199,7 +200,8 @@ export async function verifyX402Payment({ payload, expectedReceiver, expectedMic
     }
 
     // 7. Verify amount within ±1% tolerance
-    const txAmountMicro = Number(innerTxn.amount ?? 0);
+    const rawAmount = innerTxn.payment?.amount ?? innerTxn.amount ?? 0;
+    const txAmountMicro = Number(rawAmount);
     if (!microAlgosWithinTolerance(txAmountMicro, expectedMicroAlgos, 1)) {
       return {
         valid: false,
