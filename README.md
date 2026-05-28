@@ -1,6 +1,8 @@
 # SentinelAI
 
-**Pay-per-use AI API marketplace on Algorand** — creators publish AI services, users pay in ALGO micro-transactions per call, and every payment settles directly peer-to-peer on the Algorand TestNet blockchain. No subscriptions, no lock-in.
+**Pay-per-use AI API marketplace on Algorand** — creators publish AI services, users pay in ALGO micro-transactions per call, and payments settle peer-to-peer on Algorand TestNet. The **Studio** adds subscription tiers for content workflows, prompt engineering, ClipCraft, and workflow automation.
+
+**Production:** [sentinalai.dev](https://sentinalai.dev) (frontend) · API backend on Render (`sentinal-z3ue.onrender.com` recommended for `VITE_API_URL`).
 
 ---
 
@@ -39,47 +41,61 @@
 
 | Area | Purpose |
 |------|---------|
-| **`frontend/`** | Vite + React 18 + Tailwind. **Marketplace** (`/dashboard/*`) for API discovery, keys, usage, billing. **Studio** (`/studio/*`) for blogging, projects, platforms, analytics (Groq-backed). |
-| **`backend/`** | Express API, MongoDB (Mongoose), JWT auth, Algorand helpers, AI proxy for marketplace services, **Studio** routes (`/api/studio`), BullMQ publishing worker. |
-| **`contract/`** | Puya / **algopy** smart contract (`SentinelContract`) + deploy script + compiled `artifacts/`. |
+| **`frontend/`** | Vite + React 18 + Tailwind. **Marketplace** (`/dashboard/*`) for API discovery, keys, usage, billing. **Studio** (`/studio/*`) for blogging, workflows, ClipCraft, **Advanced Prompt Generator**, AI chat (x402), analytics. **Docs** (`/docs/*`) for x402 and How It Works. |
+| **`backend/`** | Express API, MongoDB, JWT auth, Algorand helpers, AI proxy, **x402** routes, **Studio** (Groq blogs, Gemini prompts, ClipCraft pipeline, subscriptions), BullMQ publishing worker. |
+| **`contract/`** | Puya / **algopy** smart contract (`SentinelContract`) + deploy script + `artifacts/`. |
 
 **Ecosystem split (product):**
 
-- **Marketplace** — Browse, buy, and use AI APIs published by creators. All calls are pay-per-use in ALGO.
-- **Studio** — Content workflows: Groq-only blog generation (SSE), drafts, scheduling, BullMQ publishing (Redis), encrypted platform tokens.
+| Product | Description |
+|---------|-------------|
+| **Marketplace** | Browse, buy, and use creator AI APIs. Pay-per-use in ALGO (`/api/use`) or **x402** (`/api/x402/use/:serviceId`) for agents. |
+| **Studio** | Groq blog generation (SSE), multi-platform publishing, **Gemini prompt tools** (server-side), Workflow Studio, ClipCraft, plan upgrades in ALGO. |
+| **Docs** | In-app guides for x402 integration and platform overview. |
 
 ---
 
 ## 2. Business Model
 
-Sentinel operates as a **decentralized AI API marketplace**. There are three types of participants:
+Sentinel operates as a **decentralized AI API marketplace** with a **Studio** subscription layer.
 
 ### Creators (Supply side)
-- Register as a Creator and publish AI services wrapping models from **Groq, OpenAI, Anthropic, or Together AI**.
-- Set their own pricing: **ALGO per 1,000 tokens** + a **minimum charge per call**.
-- Their provider API key is stored **AES-256-GCM encrypted** in the database and never exposed.
-- Every time a user calls their service, the ALGO payment goes **directly from user wallet → creator wallet** — peer-to-peer, no platform cut held in escrow.
+
+- Publish AI services (Groq, OpenAI, Anthropic, Together AI).
+- Set **ALGO per 1K tokens** + **minimum charge per call**.
+- Provider keys stored **AES-256-GCM encrypted**.
+- Marketplace payments go **user wallet → creator wallet** (P2P on TestNet).
 
 ### Users (Demand side)
-- Browse the marketplace and call any AI service.
-- Pay **per call** in ALGO via Algorand TestNet. No monthly subscription.
-- Generate an API key per service and use it like any other API (`Authorization: Bearer sk-sentinel-xxx`).
-- The **Burner Wallet** feature lets users fund a small hot wallet that pays automatically, removing the need to sign each transaction manually.
+
+- Pay **per call** in ALGO; API keys (`sk-sentinel-*`) or **burner wallet** for fewer manual signs.
+- **x402** clients can call services without API keys — payment in the `X-PAYMENT` header is authentication.
 
 ### Platform (Sentinel)
-- Charges no direct cut on marketplace transactions (all ALGO goes creator → user directly).
-- Monetizes via **Studio subscriptions**: Creator ($5/mo), Pro ($15/mo), Enterprise ($40/mo) — paid in ALGO to `RECEIVER_WALLET`.
-- Earns the **minimum network fee** on proof-of-intelligence transactions (0.001 ALGO per call) as immutable on-chain logs.
-- The optional **SentinelContract** smart contract tracks aggregate platform volume on-chain.
 
-### Key Revenue Streams
+- Marketplace: P2P to creators; optional **proof-of-intelligence** log fee (0.001 ALGO).
+- **Studio subscriptions** (ALGO/month to `RECEIVER_WALLET`): Creator **5**, Pro **15**, Enterprise **40** ALGO.
+- Optional **SentinelContract** tracks aggregate volume on-chain.
+
+### Studio subscription limits (monthly)
+
+| Tier | Blogs | Prompt Generator | Projects |
+|------|-------|------------------|----------|
+| **Free** | 3 | 10 | 2 |
+| **Creator** | 50 | 200 | 10 |
+| **Pro** | Unlimited | Unlimited | Unlimited |
+| **Enterprise** | Unlimited | Unlimited | Unlimited |
+
+Upgrades: `POST /api/studio/subscription/upgrade` (on-chain tx verified). Quotas reset on upgrade (30-day cycle).
+
+### Key revenue streams
 
 | Stream | Mechanism |
 |--------|-----------|
-| Studio subscriptions | Creators pay ALGO/month for content workflow features |
-| Creator listings | Creators fund their own AI provider keys — platform is zero-custody |
-| Proof-of-intelligence logs | 0.001 ALGO platform fee per successful AI call (on-chain attestation) |
-| Future: x402 endpoint fees | Per-request micro-fees from AI agents calling the marketplace programmatically |
+| Studio subscriptions | ALGO/month for blogs, prompts, workflows, ClipCraft |
+| Creator listings | Creators supply their own provider keys (zero-custody) |
+| Proof-of-intelligence | Small on-chain fee per attested AI call |
+| x402 marketplace | Programmatic agents pay minimum charge per call |
 
 ---
 
@@ -87,70 +103,71 @@ Sentinel operates as a **decentralized AI API marketplace**. There are three typ
 
 ```
 pay-per-usage-ai-api-access-system-using-algorand/
-├── README.md                 ← This file
-├── DOCUMENTATION.md          ← Deep-dive: flows, full endpoint tables, glossary
+├── README.md
+├── DOCUMENTATION.md          ← Deep-dive: flows, full endpoint tables
 ├── backend/
 │   ├── package.json
 │   └── src/
-│       ├── server.js         ← Express entry, routes, static SPA in production
-│       ├── config/           ← db, firebase admin, contract config
-│       ├── middleware/       ← auth, rate limits, studio quota
-│       ├── models/           ← User, Service, Transaction, Studio models, …
-│       ├── routes/           ← auth, services, use, payment, profile, studio, …
-│       ├── controllers/      ← studio.controller.js
-│       ├── services/         ← aiProxy, billing, blog.service, algorand, …
-│       ├── providers/        ← groqProvider.js (Studio AI)
-│       ├── queues/           ← BullMQ publishing queue
-│       ├── workers/          ← publishingWorker.js
-│       └── utils/            ← encrypt, jwt helpers, …
+│       ├── server.js
+│       ├── config/             ← db, firebase, corsOrigins, contract
+│       ├── constants/        ← studioPlans.js, studioLimits.js
+│       ├── middleware/       ← auth, studioQuota (blog + prompt)
+│       ├── models/
+│       ├── routes/             ← auth, services, use, x402.js, studio.routes.js, …
+│       ├── controllers/        ← studio, studioPrompt, studioSubscription
+│       ├── services/           ← aiProxy, geminiPromptService, blog.service, x402Middleware, …
+│       ├── providers/          ← groqProvider.js
+│       ├── studio/clipcraft/   ← ClipCraft pipeline (optional CLIPCRAFT_ENABLED)
+│       ├── queues/ + workers/  ← BullMQ publishing
+│       └── utils/
 ├── frontend/
 │   ├── package.json
-│   ├── vite.config.js        ← dev server + /api → localhost:5000
+│   ├── vite.config.js          ← dev: proxies /api → VITE_PROXY_TARGET (default :5001)
 │   └── src/
-│       ├── main.jsx          ← QueryClientProvider, Router, Auth
-│       ├── App.jsx           ← Nested /dashboard, /studio, /billing, redirects
-│       ├── layouts/          ← MarketplaceLayout, StudioLayout
-│       ├── pages/            ← marketplace + studio/* pages
-│       ├── components/       ← sidebars, wallet, profile, …
-│       ├── context/          ← AuthContext
-│       ├── wallet/           ← pera.js (Pera Wallet), burner.js (Burner Wallet)
-│       └── api/client.js     ← axios + JWT
-├── contract/
-│   ├── sentinel_contract.py  ← ARC4 contract source
-│   ├── deploy.py
-│   ├── requirements.txt
-│   ├── artifacts/            ← TEAL + ARC56 JSON (generated)
-│   └── contract_info.json    ← written by deploy (app id + address)
+│       ├── App.jsx
+│       ├── layouts/            ← MarketplaceLayout, StudioLayout, DocsLayout
+│       ├── pages/              ← marketplace, studio/*, X402Docs, HowItWorks
+│       ├── components/prompt-generator/
+│       ├── api/                ← client.js, promptApi.js, workflowApi.js
+│       └── wallet/             ← pera.js, burner.js
+└── contract/
+    ├── sentinel_contract.py
+    ├── deploy.py
+    └── artifacts/
 ```
 
 ---
 
 ## 4. Architecture
 
-High-level data flow:
-
 ```mermaid
 flowchart TB
   subgraph client [Browser]
     FE[React SPA :5173]
   end
-  subgraph server [Node backends]
-    API[Main Backend :5000]
+  subgraph server [Node backend]
+    API[Express API]
     PROXY[AI proxy + metering]
-    STUDIO[Studio: Groq SSE + CRUD]
+    X402[x402 middleware]
+    STUDIO[Studio: Groq + Gemini prompts]
+    CC[ClipCraft runtime]
     WORKER[BullMQ worker]
   end
-  subgraph data [Data and chain]
+  subgraph external [External]
     MONGO[(MongoDB)]
     REDIS[(Redis)]
     ALGO[Algorand TestNet]
-    GROQ[Groq / OpenAI / etc]
+    GROQ[Groq]
+    GEMINI[Google Gemini Flash]
   end
-  FE -->|HTTPS JSON| API
+  FE -->|/api via Vite proxy in dev| API
   API --> MONGO
   API --> PROXY
+  API --> X402
   API --> STUDIO
-  STUDIO --> REDIS
+  STUDIO --> GROQ
+  STUDIO --> GEMINI
+  API --> CC
   WORKER --> REDIS
   WORKER --> MONGO
   PROXY --> GROQ
@@ -158,21 +175,27 @@ flowchart TB
   API --> ALGO
 ```
 
-**Marketplace call (simplified):** user requests a quote on `/api/use` → backend runs AI and returns `paymentRef + chargeAlgo` → user pays on-chain → user claims response with `txId + paymentRef`.
+**Marketplace (classic):** `POST /api/use` → quote → on-chain pay → claim with `txId`.
 
-**Studio:** blog generation streams from Groq through `/api/studio/blog/generate` (SSE). Publishing is **never inline**: `POST /api/studio/blog/schedule` enqueues BullMQ jobs; `publishingWorker` updates `BlogPost` status.
+**Marketplace (x402):** `POST /api/x402/use/:serviceId` → HTTP 402 → client pays → retry with `X-PAYMENT` → 200 + response.
+
+**Studio blogs:** SSE from `/api/studio/blog/generate` (Groq). Publishing via BullMQ (`/api/studio/blog/schedule`).
+
+**Prompt Generator:** `/api/studio/prompt/*` (Gemini on server; `GOOGLE_API_KEY`; quota middleware).
 
 ---
 
 ## 5. Prerequisites
 
-| Tool | Version / notes |
-|------|-----------------|
-| **Node.js** | ≥ 20 (`backend` and `frontend` engines) |
-| **MongoDB** | Atlas or local URI for Mongoose |
-| **Redis** | Required for Studio publishing queue (BullMQ). Worker start is wrapped in try/catch if Redis is down. |
-| **Python** | 3.10+ for `contract/` (puyapy, algopy, py-algorand-sdk) |
-| **Algorand** | TestNet account with ALGO for deploy and demos (Pera or similar) |
+| Tool | Notes |
+|------|--------|
+| **Node.js** | ≥ 20 |
+| **MongoDB** | Atlas or local |
+| **Redis** | Studio publishing queue (BullMQ) |
+| **Google AI Studio key** | Prompt Generator (`GOOGLE_API_KEY` on backend) |
+| **Groq API key** | Studio blogs (`GROQ_API_KEY`) |
+| **Python 3.10+** | Optional: `contract/` deploy |
+| **Algorand TestNet** | Pera Wallet + ALGO for demos and plan upgrades |
 
 ---
 
@@ -181,46 +204,53 @@ flowchart TB
 ### 6.1 Clone and install
 
 ```bash
-git clone <your-fork-or-origin-url>
+git clone https://github.com/lathi-aayush/pay-per-usage-ai-api-access-system-using-algorand.git
 cd pay-per-usage-ai-api-access-system-using-algorand
 ```
 
-**Backend** (main API, port 5000)
+**Backend** (default port **5000**; use **5001** if 5000 is busy — match Vite proxy)
 
 ```bash
 cd backend
 npm install
-# create backend/.env — see §7
+cp .env.example .env
+# Set MONGO_URI, JWT_SECRET, ENCRYPTION_KEY, GROQ_API_KEY, GOOGLE_API_KEY, RECEIVER_WALLET, …
 npm run dev
-# health: GET http://localhost:5000/api/health
+curl http://localhost:5000/api/health
 ```
 
-**Frontend** (main marketplace, port 5173)
+**Frontend**
 
 ```bash
 cd frontend
 npm install
+# Local dev: leave VITE_API_URL unset — Vite proxies /api to backend (see vite.config.js)
+# If backend runs on 5001: add VITE_PROXY_TARGET=http://localhost:5001
 npm run dev
-# proxies /api → http://localhost:5000 via vite.config.js
+# Open http://localhost:5173
 ```
+
+**Do not** point `VITE_API_URL` at `sentinalai.dev` or `sentinalai.com` during local dev — those hosts serve the static site, not the API (causes CORS errors). Use the Vite proxy or `VITE_PROXY_TARGET=https://sentinal-z3ue.onrender.com` for remote API.
 
 **Smart contract (optional)**
 
 ```bash
 cd contract
 python -m venv .venv
-# Windows: .venv\Scripts\activate  |  macOS/Linux: source .venv/bin/activate
+# Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-# set DEPLOYER_MNEMONIC in env, then:
 python deploy.py
-# writes contract/contract_info.json
 ```
 
 ### 6.2 Verify
 
-1. `http://localhost:5173` — main marketplace with login
-2. `curl http://localhost:5000/api/health` → `{"ok":true}`
-3. `curl http://localhost:5000/api/services/agent-context` → live service catalog JSON
+| Check | Expected |
+|-------|----------|
+| `http://localhost:5173` | SPA loads, login works |
+| `GET /api/health` | `{"ok":true}` |
+| `GET /api/services/agent-context` | JSON catalog |
+| Studio → **Advanced Prompt Generator** | Generates after `GOOGLE_API_KEY` is set |
+| Studio → **Plan & upgrade** | Shows blog + prompt quotas |
 
 ---
 
@@ -231,199 +261,196 @@ python deploy.py
 | Variable | Purpose |
 |----------|---------|
 | `PORT` | API port (default `5000`) |
-| `MONGODB_URI` / `MONGO_URI` | MongoDB connection string |
-| `JWT_SECRET` | Signs session JWTs |
-| `ENCRYPTION_KEY` | AES-GCM for secrets at rest (e.g. burner wallet, provider keys) |
-| `NODE_ENV` | `production` serves `frontend/dist` from Express |
-| `FRONTEND_ORIGIN` / `FRONTEND_URL` | CORS allowlist |
+| `MONGO_URI` / `MONGODB_URI` | MongoDB |
+| `JWT_SECRET` | Session JWTs |
+| `ENCRYPTION_KEY` | AES-GCM (32 chars) — burner wallet, provider keys |
+| `NODE_ENV` | `production` serves `frontend/dist` |
+| `FRONTEND_ORIGIN` / `CORS_ALLOWED_ORIGINS` | CORS (includes `localhost:5173`, `sentinalai.dev`) |
+| `RECEIVER_WALLET` | Studio subscription payments (TestNet address) |
 
-### 7.2 Algorand (optional but used in flows)
-
-| Variable | Purpose |
-|----------|---------|
-| `ALGOD_SERVER` / `ALGORAND_NODE` | Algod URL (defaults to public testnet) |
-| `ALGOD_TOKEN` | If using a private node |
-| `ALGO_INDEXER_URL` | Indexer URL (default: testnet algonode) |
-| `ALGO_APP_ID` / `ALGO_CONTRACT_ADDRESS` | Override on-chain app |
-| `PLATFORM_MNEMONIC` | Proof-of-intelligence signing wallet |
-| `PROOF_LOG_ADDRESS` | Algorand address that receives proof logs |
-
-### 7.3 Firebase (Google auth)
-
-Configure Firebase Admin (`GOOGLE_APPLICATION_CREDENTIALS` or service account JSON) and client keys (`VITE_FIREBASE_*`) as used in `backend/src/config/firebaseAdmin.js` and `frontend/src/config/firebase.js`.
-
-### 7.4 SentinelAI Studio
+### 7.2 Algorand
 
 | Variable | Purpose |
 |----------|---------|
-| `GROQ_API_KEY` | Groq SDK for Studio generation |
-| `REDIS_URL` | BullMQ connection |
-| `RECEIVER_WALLET` | Algorand address that receives Studio plan upgrade payments |
+| `ALGOD_SERVER` / `ALGORAND_NODE` | Algod URL |
+| `ALGO_INDEXER_URL` | Indexer for tx verify |
+| `ALGO_APP_ID` / `ALGO_CONTRACT_ADDRESS` | Optional contract |
+| `PLATFORM_MNEMONIC` / `PROOF_LOG_ADDRESS` | Proof-of-intelligence |
+
+### 7.3 Studio AI
+
+| Variable | Purpose |
+|----------|---------|
+| `GROQ_API_KEY` | Blogging Agent (Groq SSE) |
+| `GOOGLE_API_KEY` | **Advanced Prompt Generator** (Gemini Flash on server) |
+| `GEMINI_MODEL` | Optional override (`gemini-2.5-flash`, etc.) |
+| `REDIS_URL` | Publishing queue |
+
+### 7.4 ClipCraft (optional)
+
+| Variable | Purpose |
+|----------|---------|
+| `CLIPCRAFT_ENABLED` | `true` to start ClipCraft runtime |
+| See `backend/.env.example` | Provider mode, credits, queue adapters |
 
 ### 7.5 Frontend (`frontend/.env`)
 
 | Variable | Purpose |
 |----------|---------|
-| `VITE_API_URL` | Base URL for axios when API is not proxied |
+| `VITE_API_URL` | **Production build only** — Render backend URL (e.g. `https://sentinal-z3ue.onrender.com`) |
+| `VITE_PROXY_TARGET` | **Local dev** — backend URL for Vite proxy (default `http://localhost:5001`) |
+| `VITE_RECEIVER_WALLET` | Must match backend `RECEIVER_WALLET` for plan upgrades |
 | `VITE_FIREBASE_*` | Firebase web client |
+| `VITE_PUBLIC_SITE_URL` | Optional — blog links (`https://sentinalai.dev`) |
 
-**Never commit** `.env` files or mnemonics.
+**Never commit** `.env` files, mnemonics, or API keys.
 
 ---
 
 ## 8. Smart contract
 
-**Language:** Python with **algopy**, compiled via **puyapy** to TEAL. **ARC-4** contract: `SentinelContract`.
+**Language:** Python **algopy** → TEAL via **puyapy**. **ARC-4** `SentinelContract`.
 
-**Global state (uint64):**
+| Method | Description |
+|--------|-------------|
+| `create_application(min_amount)` | Deploy; set minimum payment |
+| `purchase(pay)` | Payment txn ≥ min; increment stats |
+| `read_stats()` | Read global counters |
 
-| Field | Meaning |
-|-------|---------|
-| `min_payment` | Minimum payment amount in microAlgos |
-| `total_purchases` | Count of successful purchases |
-| `total_algo_received` | Sum of payment amounts (microAlgos) |
-
-**Methods:**
-
-| Method | Type | Description |
-|--------|------|-------------|
-| `create_application(min_amount)` | Create | On deploy, sets `min_payment` and zeros counters. |
-| `purchase(pay)` | Call | Reference payment txn: receiver = app account; `pay.amount >= min_payment`; increments stats. |
-| `read_stats()` | Readonly | Returns `(min_payment, total_purchases, total_algo_received)`. |
-
-**Backend read:** `GET /api/contract/stats` reads global state when contract env is configured.
+**Backend:** `GET /api/contract/stats` when contract env is configured.
 
 ---
 
 ## 9. API surface (summary)
 
-Mounted in `backend/src/server.js`:
-
 | Prefix | Role |
 |--------|------|
-| `/api/auth` | Login, register, Firebase bridges |
-| `/api/services` | Public + creator service CRUD; `/agent-context` (new) |
-| `/api/payment` | Payment intent create / on-chain verify |
-| `/api/access` | Access tokens / keys |
-| `/api/creator` | Creator dashboard data |
-| `/api/use` | Metered AI use (quote → pay → complete) |
-| `/api/prediction` | ML-powered usage prediction |
-| `/api/user` | User role: balance, proxy keys, usage |
-| `/api/contract` | On-chain stats |
-| `/api/wallet` | Wallet link / burner helpers |
-| `/api/profile` | Profile summary, update, **burner wallet sync** |
-| `/api/dev` | Dev-only utilities (guarded) |
-| `/api/studio` | Studio: blogs, projects, platforms, analytics, calendar |
+| `/api/auth` | Login, Firebase |
+| `/api/services` | Marketplace CRUD; `/agent-context` |
+| `/api/use` | Classic pay-per-use (quote → pay → claim) |
+| `/api/x402` | x402-gated AI (`/services`, `/use/:serviceId`) |
+| `/api/payment`, `/api/access`, `/api/creator`, `/api/user` | Billing, keys, creator dashboard |
+| `/api/profile` | Profile, **burner wallet** sync |
+| `/api/contract`, `/api/wallet`, `/api/prediction` | Chain stats, wallet, forecasts |
+| `/api/studio` | Blogs, projects, platforms, analytics, calendar, **subscription**, **workflows**, **clipcraft** |
+| `/api/studio/prompt` | **generate**, **enhance**, **improve**, **analyze**, **variations** (auth + quota) |
 
-For **every route, request body, and sequence diagram**, use **`DOCUMENTATION.md`**.
+Studio usage: `GET /api/studio/usage` → `tier`, `monthlyBlogsUsed`, `monthlyBlogLimit`, `monthlyPromptsUsed`, `monthlyPromptLimit`.
+
+Details: **`DOCUMENTATION.md`**.
 
 ---
 
 ## 10. Frontend routes
 
-| Prefix | Layout | Audience |
-|--------|--------|----------|
-| `/dashboard/*` | `MarketplaceLayout` + `MarketplaceSidebar` | End users: home (with Agent Context JSON panel), browse, keys, usage, creators, service detail |
-| `/billing/transactions` | Same marketplace shell | Transaction history |
-| `/studio/*` | `StudioLayout` | Studio: home, blogging agent, projects, calendar, drafts, published, platforms, analytics, apps, queue |
-| `/creator`, `/creator/new` | Creator dashboards | API creators |
-| `/` | `Home` | Landing, auth entry |
+### Marketplace (`/dashboard/*`)
 
-Legacy **`/marketplace/*`** and **`/user/*`** paths redirect to the `/dashboard/*` equivalents.
+Home (Agent Context JSON), browse, keys, usage, creators, service detail, billing transactions.
+
+### Studio (`/studio/*`)
+
+| Path | Feature |
+|------|---------|
+| `/studio` | Studio home |
+| `/studio/workflows` | Workflow Studio (builder, templates, history) |
+| `/studio/blogging-agent` | Groq blog editor + publish |
+| `/studio/prompt-generator` | Advanced Prompt Generator (Gemini, subscription quota) |
+| `/studio/clipcraft` | ClipCraft video clips pipeline |
+| `/studio/chat` | AI Chat (x402-backed services) |
+| `/studio/projects`, `/studio/calendar`, `/studio/drafts`, `/studio/published` | Content organization |
+| `/studio/platforms` | Connected publish targets |
+| `/studio/analytics` | Studio analytics |
+| `/studio/plan` | Subscription upgrade (ALGO via Pera) |
+| `/studio/queue`, `/studio/exports`, `/studio/storage`, `/studio/apps` | Ops / tooling |
+
+### Docs (`/docs/*`)
+
+| Path | Content |
+|------|---------|
+| `/docs/x402` | x402 user guide |
+| `/docs/x402-api` | x402 developer reference |
+| `/docs/how-it-works` | Platform overview |
+
+### Other
+
+| Path | Audience |
+|------|----------|
+| `/creator`, `/creator/new` | API creators |
+| `/` | Landing + auth |
+
+Legacy `/marketplace/*` and `/user/*` redirect to `/dashboard/*`.
 
 ---
 
 ## 11. x402 Payment Protocol
 
-> **Status: Roadmap — planned as parallel endpoint, not yet in production.**
+**Status: implemented** at `/api/x402` (packages `@x402/core`, `@x402/avm`).
 
-The [x402 protocol](https://x402.org) is an open standard that repurposes the HTTP `402 Payment Required` status code to create a universal payment challenge-response loop for AI agents and programmatic clients.
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/x402/services` | List x402-enabled services |
+| `POST /api/x402/use/:serviceId` | Pay-per-call with HTTP 402 challenge / `X-PAYMENT` retry |
 
-### How it differs from the current custom flow
+**Flow:** Client requests without payment → **402** + `Payment-Required` header → client signs Algorand tx → retry with `X-PAYMENT` → AI response. **No API key required** — sender address from the tx is the identity.
 
-| Step | Current Sentinel flow | x402 flow |
-|------|-----------------------|-----------|
-| 1 | `POST /api/use` → quote | Client sends regular HTTP request |
-| 2 | User pays on-chain manually | Server returns **HTTP 402** with `PAYMENT-REQUIRED` header |
-| 3 | `POST /api/use` with `txId` → claim | x402 client auto-pays and retries with `X-PAYMENT` header |
-| 4 | AI response returned | Server verifies payment → returns resource |
+**Studio AI Chat** (`/studio/chat`) uses the same x402 service list for in-browser paid chat.
 
-### Planned integration
+**Classic `/api/use`** remains for per-token metering and marketplace users with API keys.
 
-The plan is to add a **parallel endpoint** (`/api/x402/use/:serviceId`) that wraps the existing AI services with x402-standard middleware from `@x402/avm`. The existing two-step `/api/use` flow will remain untouched for marketplace users who want per-token billing accuracy.
-
-```
-Existing:  POST /api/use  →  quote  →  POST /api/use  →  claim   (per-token pricing)
-New:       GET  /api/x402/use/:id  →  402  →  retry  →  200      (fixed minimum charge)
-```
-
-**Why it matters:**
-- Any x402-aware AI agent (Claude tools, AutoGPT, etc.) can call Sentinel services with zero custom code
-- Reduces the chat backend from 5 async steps to 1 `wrapFetchWithPayment()` call
-- Future-proofs the marketplace as x402 gains industry adoption
-
-**Key packages (planned):** `@x402/avm`, `@x402/fetch`
+In-app docs: `/docs/x402` and `/docs/x402-api`. Test page: `frontend/x402-test.html`.
 
 ---
 
 ## 12. Agent Context JSON
 
-**`GET /api/services/agent-context`** — public, no auth required.
+**`GET /api/services/agent-context`** — public, live catalog for AI assistants.
 
-This endpoint returns a **live, machine-readable JSON document** describing every active, configured service on the Sentinel marketplace. It is designed to be pasted directly into any AI assistant (Claude, ChatGPT, Gemini, etc.) so the AI can recommend the best service for a user's use-case.
-
-The JSON includes:
-- System prompt instructions for the AI agent
-- Per-service: name, description, badge (official / community), AI provider, model, pricing, usage stats, and step-by-step `how_to_use` instructions
-- `generated_at` timestamp — the document is always fresh, generated on-the-fly from the live database
-
-**How to use it:**
-
-1. Go to the User Dashboard (`/dashboard/home`)
-2. Scroll to the **Agent Context JSON** panel
-3. Click **Copy JSON** or **Download .json**
-4. Open your AI assistant of choice and paste the JSON
-5. Ask: *"Here is the Sentinel marketplace JSON. Which service should I use for generating code?"*
-
-The panel also shows live status pills (active service count, network, generation time) and a scrollable JSON preview.
+Includes per-service pricing, models, `how_to_use`, and `generated_at`. Copy from **Dashboard → Agent Context JSON** panel.
 
 ---
 
 ## 13. Production notes
 
-- Set `NODE_ENV=production` and run `npm run build` in `frontend/`. Express serves `frontend/dist`.
-- Align `FRONTEND_ORIGIN` with your deployed SPA URL.
-- Use strong `JWT_SECRET` and a dedicated `ENCRYPTION_KEY` — these **must match** across main backend and chat backend.
-- Redis should be managed (TLS URL for cloud Redis) for Studio publishing.
-- The `base_url` in the Agent Context JSON (`/api/services/agent-context`) defaults to `http://localhost:5000`. Set `FRONTEND_ORIGIN` / `VITE_API_URL` to your production URL so the agent context reflects the correct endpoint.
+### Deploy layout
+
+| Service | Typical host | Env |
+|---------|--------------|-----|
+| **Frontend** | `sentinalai.dev` (Render/Vercel static) | `VITE_API_URL` = **backend** URL (not the `.dev` site URL) |
+| **Backend** | `sentinal-z3ue.onrender.com` | `GOOGLE_API_KEY`, `GROQ_API_KEY`, `MONGO_URI`, `RECEIVER_WALLET`, `FRONTEND_ORIGIN=https://sentinalai.dev` |
+
+### Checklist
+
+- `npm run build` in `frontend/`; `NODE_ENV=production` on backend.
+- Set **`GOOGLE_API_KEY`** on backend for Prompt Generator.
+- Redis (TLS) for Studio publishing.
+- Strong `JWT_SECRET` and `ENCRYPTION_KEY`.
+- CORS: `sentinalai.dev`, Render URLs, and `http://localhost:5173` are in `backend/src/config/corsOrigins.js` defaults.
+- Match `VITE_RECEIVER_WALLET` (frontend build) with `RECEIVER_WALLET` (backend).
+
+### Local vs production API
+
+| Environment | API access |
+|-------------|------------|
+| `npm run dev` | Same-origin `/api` → Vite proxy → local or `VITE_PROXY_TARGET` |
+| Production SPA | Absolute `VITE_API_URL` → Render backend |
 
 ---
 
 ## 14. Git workflow and commits
 
-**Branches**
+**Branches:** `main` (release), `feature/*`, `fix/*`, team branches (`deb`, `aayush`, etc.).
 
-- `main` — release-ready code.
-- `feature/<short-name>` — new features.
-- `fix/<short-name>` — bugfixes.
+**Commits:** Conventional Commits (`feat:`, `fix:`, `docs:`). No secrets in git.
 
-**Commits**
-
-- Prefer **Conventional Commits**: `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`, `test:`.
-- One logical change per commit; messages imperative ("Add agent-context endpoint" not "Added").
-- Do not commit **secrets**, `node_modules`, or local `.env`.
-
-**Pull requests**
-
-- Describe **what** and **why**, list test steps, link issues.
-- Keep Marketplace and Studio concerns in **separate commits or PRs**.
+**Pull requests:** Describe what/why, test steps; keep Marketplace vs Studio changes reviewable.
 
 ---
 
 ## 15. Further reading
 
-- **`DOCUMENTATION.md`** — End-to-end technical reference: login flows, pay-per-use sequence, burner wallet sync, full API listing, security notes.
-- **`contract/deploy.py`** — Env vars and compile/deploy steps inline in the script header.
-- **[x402.org](https://x402.org)** — x402 protocol specification.
-- **[Algorand TestNet Dispenser](https://bank.testnet.algorand.network/)** — Get free TestNet ALGO.
-
+- **`DOCUMENTATION.md`** — Full API tables, sequences, security.
+- **`backend/.env.example`** — All backend flags including ClipCraft and Gemini.
+- **`frontend/.env.example`** — Dev proxy vs production `VITE_API_URL`.
+- **[x402.org](https://x402.org)** — x402 specification.
+- **[Google AI Studio](https://aistudio.google.com/apikey)** — Gemini API key for Prompt Generator.
+- **[Algorand TestNet Dispenser](https://bank.testnet.algorand.network/)** — TestNet ALGO.
