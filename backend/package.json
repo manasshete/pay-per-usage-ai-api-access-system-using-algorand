@@ -11,6 +11,8 @@
     "dev": "nodemon src/server.js"
   },
   "dependencies": {
+    "@x402/avm": "^2.13.0",
+    "@x402/core": "^2.13.0",
     "algosdk": "^3.5.2",
     "axios": "^1.7.9",
     "bullmq": "^5.76.10",

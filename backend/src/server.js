@@ -1,6 +1,8 @@
+// Trigger reload to restart backend
 import "./loadEnv.js";
 import path from "path";
 import { fileURLToPath } from "url";
+
 import express from "express";
 import "express-async-errors";
 import cors from "cors";
@@ -19,6 +21,7 @@ import walletRoutes from "./routes/wallet.js";
 import profileRoutes from "./routes/profile.js";
 import devRoutes from "./routes/dev.js";
 import studioRoutes from "./routes/studio.routes.js";
+import x402Routes from "./routes/x402.js";
 import { startPublishingWorker } from "./workers/publishingWorker.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -72,6 +75,7 @@ app.use("/api/wallet", walletRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/dev", devRoutes);
 app.use("/api/studio", studioRoutes);
+app.use("/api/x402", x402Routes);
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Not found" });
