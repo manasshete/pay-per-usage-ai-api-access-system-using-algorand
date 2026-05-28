@@ -425,6 +425,15 @@
     let currentAccount = null;
     let availableServices = [];
 
+    // Determine the API base URL dynamically
+    function getApiBase() {
+      if (window.location.port === "5000" || window.location.origin.includes("localhost:5000")) {
+        return "";
+      }
+      return "http://localhost:5000";
+    }
+    const apiBase = getApiBase();
+
     // Initialize Page
     window.addEventListener("DOMContentLoaded", async () => {
       // Pre-fill mnemonic
@@ -510,7 +519,7 @@
     async function fetchX402Services() {
       try {
         log("Fetching active x402 services from backend...");
-        const res = await fetch("/api/x402/services");
+        const res = await fetch(apiBase + "/api/x402/services");
         const data = await res.json();
         
         if (data.services && data.services.length > 0) {
@@ -553,7 +562,7 @@
 
         // --- Step 1: Send Request without Header ---
         log("Step 1: Sending request without Payment Header...");
-        const initialRes = await fetch(`/api/x402/use/${serviceId}`, {
+        const initialRes = await fetch(apiBase + `/api/x402/use/${serviceId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ messages: [{ role: "user", content: prompt }] })
@@ -628,7 +637,7 @@
 
         // --- Step 5: Retry request with Header ---
         log("Step 6: Resending HTTP request with payment header...");
-        const retryRes = await fetch(`/api/x402/use/${serviceId}`, {
+        const retryRes = await fetch(apiBase + `/api/x402/use/${serviceId}`, {
           method: "POST",
           headers: { 
             "Content-Type": "application/json",
