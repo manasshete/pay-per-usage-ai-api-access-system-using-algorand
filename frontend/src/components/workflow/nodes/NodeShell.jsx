@@ -18,17 +18,28 @@ export default function NodeShell({
   children,
   inputPosition = Position.Top,
   outputs = [{ id: "out", position: Position.Bottom }],
+  nodeType,
 }) {
   const { nodeStatuses } = useNodeExecution();
   const executionStatus = nodeStatuses[id] || "idle";
+  const isOutputNode = nodeType === "output";
+  const isDone = executionStatus === "success" || executionStatus === "completed";
+  const statusLabel =
+    isOutputNode && isDone
+      ? "DONE"
+      : executionStatus === "success"
+        ? "DONE"
+        : executionStatus;
 
   return (
     <div
       className={`
-        rounded-xl border px-4 py-3 min-w-[200px] cursor-pointer bg-white shadow-sm
+        rounded-xl border px-4 py-3 min-w-[200px] cursor-pointer bg-white shadow-sm transition-shadow
         ${selected ? "border-[#031634] ring-2 ring-[#031634]/20" : "border-surface-variant"}
-        ${executionStatus === "running" ? "border-cyan-500" : ""}
+        ${executionStatus === "running" ? "border-cyan-500 shadow-md" : ""}
         ${executionStatus === "error" ? "border-rose-500" : ""}
+        ${isOutputNode && isDone ? "border-emerald-500 ring-4 ring-emerald-400/50 shadow-lg shadow-emerald-100" : ""}
+        ${isOutputNode && executionStatus === "running" ? "border-emerald-600 animate-pulse" : ""}
       `}
     >
       {inputPosition && (
@@ -47,7 +58,7 @@ export default function NodeShell({
               STATUS_STYLES[executionStatus] || STATUS_STYLES.idle
             }`}
           >
-            {executionStatus}
+            {statusLabel}
           </span>
         </div>
       </div>

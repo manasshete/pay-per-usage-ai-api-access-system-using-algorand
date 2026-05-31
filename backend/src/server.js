@@ -90,6 +90,11 @@ app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
 
+const pipelineOutputDir = path.join(__dirname, "..", "outputs", "pipeline");
+app.use("/outputs/pipeline", express.static(pipelineOutputDir));
+const workflowOutputDir = path.join(__dirname, "..", "outputs", "workflow");
+app.use("/outputs/workflow", express.static(workflowOutputDir));
+
 if (process.env.NODE_ENV === "production") {
   const dist = path.join(__dirname, "..", "..", "frontend", "dist");
 

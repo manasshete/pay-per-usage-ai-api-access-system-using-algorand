@@ -5,6 +5,9 @@ export default function WorkflowToolbar({
   onNameChange,
   onSave,
   onRun,
+  onOpenResults,
+  hasRunData,
+  resultsPanelOpen,
   isSaving,
   isRunning,
   lastSavedAt,
@@ -32,6 +35,16 @@ export default function WorkflowToolbar({
       >
         Save
       </button>
+      {hasRunData && !resultsPanelOpen && (
+        <button
+          type="button"
+          onClick={onOpenResults}
+          className="text-xs px-3 py-2 rounded-md border-2 border-emerald-500 bg-emerald-50 text-emerald-900 font-bold hover:bg-emerald-100 flex items-center gap-1"
+        >
+          <span className="material-symbols-outlined text-base">panel_open</span>
+          View results
+        </button>
+      )}
       <button
         type="button"
         onClick={onRun}

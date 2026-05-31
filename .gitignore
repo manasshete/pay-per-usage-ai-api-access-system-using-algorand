@@ -4,3 +4,8 @@ node_modules/
 dist/
 build/
 .vercel/
+backend/uploads/
+backend/outputs/
+# GCP service account keys — never commit
+sentinal-ai-*.json
+**/service-account*.json

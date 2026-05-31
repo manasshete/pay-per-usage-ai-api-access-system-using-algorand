@@ -32,6 +32,7 @@ const ClipCraft = lazy(() => import("./pages/studio/ClipCraft.jsx"));
 const StudioAnalytics = lazy(() => import("./pages/studio/Analytics.jsx"));
 const PromptGenerator = lazy(() => import("./pages/studio/PromptGenerator.jsx"));
 const CreativeWorkflow = lazy(() => import("./pages/studio/CreativeWorkflow.jsx"));
+const AgenticPipeline = lazy(() => import("./pages/studio/AgenticPipeline/index.jsx"));
 const ViralThumbnailAI = lazy(() => import("./pages/studio/ViralThumbnailAI.jsx"));
 import X402Docs from "./pages/X402Docs.jsx";
 import X402DevDocs from "./pages/X402DevDocs.jsx";
@@ -276,6 +277,14 @@ export default function App() {
           element={
             <StudioSuspense>
               <CreativeWorkflow />
+            </StudioSuspense>
+          }
+        />
+        <Route
+          path="agentic-pipeline"
+          element={
+            <StudioSuspense>
+              <AgenticPipeline />
             </StudioSuspense>
           }
         />

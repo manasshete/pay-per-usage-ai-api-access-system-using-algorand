@@ -6,6 +6,7 @@ import * as studioSubscription from "../controllers/studioSubscription.controlle
 import * as studioPrompt from "../controllers/studioPrompt.controller.js";
 import * as studioThumbnail from "../controllers/studioThumbnail.controller.js";
 import * as studioWorkflow from "../controllers/studioWorkflow.controller.js";
+import agenticPipelineRoutes from "./agenticPipeline.routes.js";
 import { workflowsRouter, runsRouter, templatesRouter } from "./workflows.js";
 import clipcraftRoutes from "../studio/clipcraft/routes/clipcraft.routes.js";
 
@@ -34,6 +35,8 @@ router.post("/thumbnail/variations", checkPromptQuota, studioThumbnail.postThumb
 router.post("/thumbnail/regenerate-image", checkPromptQuota, studioThumbnail.postThumbnailRegenerateImage);
 
 router.post("/workflow/creative", checkPromptQuota, studioWorkflow.postCreativeWorkflow);
+
+router.use("/agentic", agenticPipelineRoutes);
 
 router.post("/blog/generate", checkBlogQuota, studio.postGenerateStream);
 router.post("/blog/save", studio.postBlogSave);

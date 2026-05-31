@@ -9,6 +9,8 @@ import WorkflowCanvas, { NODE_DEFAULTS } from "../components/workflow/WorkflowCa
 import NodePalette from "../components/workflow/NodePalette.jsx";
 import WorkflowToolbar from "../components/workflow/controls/WorkflowToolbar.jsx";
 import ExecutionPanel from "../components/workflow/controls/ExecutionPanel.jsx";
+import ExecutionPanelTab from "../components/workflow/controls/ExecutionPanelTab.jsx";
+import { WORKFLOW_OPEN_EXECUTION_PANEL, openWorkflowExecutionPanel } from "../utils/workflowUi.js";
 import { useWorkflowPersistence } from "../hooks/useWorkflowPersistence.js";
 import { useWorkflowExecutor } from "../hooks/useWorkflowExecutor.js";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -42,6 +44,19 @@ function BuilderInner() {
   const { isRunning, currentRun, liveLogs, runWorkflow } = useWorkflowExecutor(effectiveId);
 
   useWorkflowPersistence();
+
+  const hasRunData = Boolean(
+    currentRun?.status ||
+      (currentRun?.nodeResults?.length || 0) > 0 ||
+      (currentRun?.logs?.length || 0) > 0 ||
+      liveLogs.length > 0
+  );
+
+  useEffect(() => {
+    const openPanel = () => setPanelOpen(true);
+    window.addEventListener(WORKFLOW_OPEN_EXECUTION_PANEL, openPanel);
+    return () => window.removeEventListener(WORKFLOW_OPEN_EXECUTION_PANEL, openPanel);
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -154,6 +169,9 @@ function BuilderInner() {
         name={name}
         onNameChange={setName}
         onSave={() => saveWorkflow().then(() => toast.success("Saved"))}
+        onOpenResults={() => setPanelOpen(true)}
+        hasRunData={hasRunData}
+        resultsPanelOpen={panelOpen}
         onRun={() => {
           if (nodes.length === 0) {
             toast.error("Add at least one node before running");
@@ -287,6 +305,39 @@ function BuilderInner() {
                 </select>
               </>
             )}
+            {selectedNode.type?.startsWith("agentic") && (
+              <>
+                <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                  Uses the same Gemini / Vertex agents as{" "}
+                  <Link to="/studio/agentic-pipeline" className="text-secondary underline">
+                    Agentic Pipeline
+                  </Link>
+                  . Connect upstream nodes left-to-right.
+                </p>
+                {selectedNode.type === "agenticImage" && (
+                  <>
+                    <label className="block text-[10px] text-slate-500 mt-2">Keyframe count</label>
+                    <select
+                      className="workflow-field w-full border border-surface-variant rounded-md px-2 py-1.5 text-primary text-xs"
+                      value={selectedNode.data?.imageCount ?? 3}
+                      onChange={(e) => updateSelectedData({ imageCount: Number(e.target.value) })}
+                    >
+                      <option value={1}>1</option>
+                      <option value={2}>2</option>
+                      <option value={3}>3</option>
+                    </select>
+                  </>
+                )}
+                <label className="block text-[10px] text-slate-500 mt-2">Optional goal override</label>
+                <textarea
+                  className="workflow-field w-full border border-surface-variant rounded-md px-2 py-1.5 text-primary text-xs"
+                  rows={2}
+                  value={selectedNode.data?.goal || ""}
+                  onChange={(e) => updateSelectedData({ goal: e.target.value })}
+                  placeholder="Leave empty to use upstream input"
+                />
+              </>
+            )}
             {selectedNode.type === "blog" && (
               <>
                 <label className="block text-[10px] text-slate-500 mt-2">Studio project</label>
@@ -388,7 +439,12 @@ function BuilderInner() {
             setEdges={setEdges}
             executionState={executionState}
             selectedNodeId={selectedId}
-            onNodeClick={(node) => setSelectedId(node.id)}
+            onNodeClick={(node) => {
+              setSelectedId(node.id);
+              if (node.type === "output" && hasRunData) {
+                openWorkflowExecutionPanel();
+              }
+            }}
             onNodeRemoved={clearSelection}
           />
         </div>
@@ -399,7 +455,10 @@ function BuilderInner() {
             isOpen={panelOpen}
             onClose={() => setPanelOpen(false)}
             liveLogs={liveLogs}
-            onRerun={runWorkflow}
+            onRerun={() => {
+              setPanelOpen(true);
+              runWorkflow();
+            }}
             onOpenBlog={(postId) => {
               navigate("/studio/blogging-agent", { state: { postId } });
             }}
@@ -409,6 +468,14 @@ function BuilderInner() {
           />
         </div>
       </div>
+
+      {!panelOpen && (
+        <ExecutionPanelTab
+          run={currentRun}
+          isRunning={isRunning}
+          onOpen={() => setPanelOpen(true)}
+        />
+      )}
     </div>
   );
 }

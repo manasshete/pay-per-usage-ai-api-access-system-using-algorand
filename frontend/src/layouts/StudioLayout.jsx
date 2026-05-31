@@ -31,6 +31,12 @@ const nav = [
     label: "Creative Workflow",
     icon: "linked_services",
   },
+  {
+    id: "agentic-pipeline",
+    path: "/studio/agentic-pipeline",
+    label: "Agentic Pipeline",
+    icon: "hub",
+  },
   { id: "clipcraft", path: "/studio/clipcraft", label: "ClipCraft", icon: "movie_edit" },
   { id: "chat", path: "/studio/chat", label: "AI Chat", icon: "chat" },
   { id: "projects", path: "/studio/projects", label: "Projects", icon: "folder" },
@@ -78,7 +84,8 @@ export default function StudioLayout() {
   const onPromptPage =
     pathname.startsWith("/studio/prompt-generator") ||
     pathname.startsWith("/studio/viral-thumbnail") ||
-    pathname.startsWith("/studio/creative-workflow");
+    pathname.startsWith("/studio/creative-workflow") ||
+    pathname.startsWith("/studio/agentic-pipeline");
 
   return (
     <div className="antialiased min-h-screen bg-[#f9f9f9]">

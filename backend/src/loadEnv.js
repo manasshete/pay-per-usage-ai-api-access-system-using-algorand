@@ -3,6 +3,7 @@
  * Default dotenv only reads cwd — fails when dev is started from repo root.
  */
 import dotenv from "dotenv";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -23,3 +24,50 @@ console.log(
   "[env] GOOGLE_API_KEY:",
   process.env.GOOGLE_API_KEY?.trim() || process.env.GEMINI_API_KEY?.trim() ? "loaded" : "MISSING (Prompt Generator disabled)"
 );
+
+const gcpCreds = process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim();
+if (gcpCreds) {
+  const credsPath = path.isAbsolute(gcpCreds)
+    ? gcpCreds
+    : path.resolve(path.dirname(envPath), gcpCreds);
+  process.env.GOOGLE_APPLICATION_CREDENTIALS = credsPath;
+  if (fs.existsSync(credsPath)) {
+    console.log("[env] GOOGLE_APPLICATION_CREDENTIALS:", "loaded");
+  } else {
+    console.warn("[env] GOOGLE_APPLICATION_CREDENTIALS: file not found at", credsPath);
+  }
+} else {
+  console.log("[env] GOOGLE_APPLICATION_CREDENTIALS:", "not set (Vertex Imagen/Veo disabled)");
+}
+
+if (process.env.GOOGLE_CLOUD_PROJECT?.trim()) {
+  console.log("[env] GOOGLE_CLOUD_PROJECT:", process.env.GOOGLE_CLOUD_PROJECT.trim());
+}
+
+const gcsBucket = process.env.GCS_ASSETS_BUCKET?.trim();
+if (gcsBucket && process.env.GOOGLE_CLOUD_PROJECT?.trim()) {
+  console.log("[env] GCS_ASSETS_BUCKET:", gcsBucket, "(pipeline + workflow assets → signed URLs)");
+} else if (gcsBucket) {
+  console.warn("[env] GCS_ASSETS_BUCKET set but GOOGLE_CLOUD_PROJECT missing");
+} else {
+  console.log("[env] GCS_ASSETS_BUCKET: not set (assets saved under backend/outputs/pipeline)");
+}
+
+if (process.env.VERTEX_IMAGEN_ENABLED === "true") {
+  console.log("[env] VERTEX_IMAGEN_ENABLED: true (Imagen via Vertex; needs aiplatform.user)");
+} else {
+  console.log("[env] Workflow images: Gemini (GOOGLE_API_KEY). Set VERTEX_IMAGEN_ENABLED=true for Imagen.");
+}
+
+const vertexKey = (process.env.VERTEX_API_KEY || process.env.VERTEX_AI_API_KEY || "").trim();
+if (vertexKey) {
+  console.log("[env] VERTEX_API_KEY: loaded (used if service account is not set)");
+} else {
+  console.log("[env] VERTEX_API_KEY: not set (optional; from Vertex AI Studio express mode)");
+}
+
+if (process.env.GOOGLE_CLOUD_PROJECT?.trim() && gcsBucket) {
+  console.log("[env] Veo video: configured (requires Model Garden allowlist on project)");
+} else if (process.env.GOOGLE_CLOUD_PROJECT?.trim()) {
+  console.warn("[env] Veo video: set GCS_ASSETS_BUCKET for Veo output storage");
+}

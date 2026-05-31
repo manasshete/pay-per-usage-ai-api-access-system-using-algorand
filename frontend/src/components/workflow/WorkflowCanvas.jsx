@@ -18,6 +18,7 @@ import OutputNode from "./nodes/OutputNode.jsx";
 import BlogNode from "./nodes/BlogNode.jsx";
 import PromptGenNode from "./nodes/PromptGenNode.jsx";
 import ImageGenNode from "./nodes/ImageGenNode.jsx";
+import AgenticAgentNode from "./nodes/AgenticAgentNode.jsx";
 import AnimatedEdge from "./edges/AnimatedEdge.jsx";
 
 const nodeTypes = {
@@ -28,6 +29,11 @@ const nodeTypes = {
   blog: BlogNode,
   promptGen: PromptGenNode,
   imageGen: ImageGenNode,
+  agenticText: AgenticAgentNode,
+  agenticImage: AgenticAgentNode,
+  agenticVideo: AgenticAgentNode,
+  agenticAudio: AgenticAgentNode,
+  agenticCode: AgenticAgentNode,
 };
 const edgeTypes = { animated: AnimatedEdge };
 
@@ -70,6 +76,33 @@ export const NODE_DEFAULTS = {
   imageGen: {
     label: "Image Generator",
     aspectRatio: "16:9",
+    estimatedCredits: 0.006,
+    config: {},
+  },
+  agenticText: {
+    label: "Agentic · Text",
+    goal: "",
+    estimatedCredits: 0.008,
+    config: {},
+  },
+  agenticImage: {
+    label: "Agentic · Image",
+    imageCount: 3,
+    estimatedCredits: 0.018,
+    config: {},
+  },
+  agenticVideo: {
+    label: "Agentic · Video",
+    estimatedCredits: 0.05,
+    config: {},
+  },
+  agenticAudio: {
+    label: "Agentic · Audio",
+    estimatedCredits: 0.01,
+    config: {},
+  },
+  agenticCode: {
+    label: "Agentic · Code",
     estimatedCredits: 0.006,
     config: {},
   },
@@ -175,8 +208,6 @@ function FlowCanvas({
         onConnect={onConnect}
         onNodeClick={(_, node) => onNodeClick?.(node)}
         onPaneClick={() => onNodeRemoved?.()}
-        nodesDeletable
-        edgesDeletable
         deleteKeyCode={["Delete", "Backspace"]}
         defaultViewport={{ x: 0, y: 0, zoom: 1 }}
         minZoom={0.3}
