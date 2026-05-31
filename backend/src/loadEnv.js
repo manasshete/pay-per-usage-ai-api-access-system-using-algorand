@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import algosdk from "algosdk";
+import { probePlatformMnemonic, getPlatformTreasuryKey } from "./services/platformTreasuryKey.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.resolve(__dirname, "..", ".env");
@@ -73,14 +73,27 @@ if (process.env.GOOGLE_CLOUD_PROJECT?.trim() && gcsBucket) {
   console.warn("[env] Veo video: set GCS_ASSETS_BUCKET for Veo output storage");
 }
 
-const platformMn = process.env.PLATFORM_MNEMONIC?.trim();
-if (!platformMn) {
+const platformProbe = probePlatformMnemonic();
+if (platformProbe.status === "missing") {
   console.warn("[env] PLATFORM_MNEMONIC: not set (creator withdrawals disabled)");
+} else if (platformProbe.status === "ok") {
+  console.log(
+    `[env] PLATFORM_MNEMONIC: valid treasury (${platformProbe.mode})`,
+    platformProbe.addr.slice(0, 8) + "…"
+  );
+} else if (platformProbe.status === "bip39_pending") {
+  console.log(
+    `[env] PLATFORM_MNEMONIC: ${platformProbe.wordCount}-word Pera Universal phrase (BIP-39); deriving treasury on first withdraw…`
+  );
+  void getPlatformTreasuryKey()
+    .then((t) => {
+      console.log("[env] PLATFORM_MNEMONIC: treasury ready", t.addr.slice(0, 8) + "…", `(${t.mode})`);
+    })
+    .catch((err) => {
+      console.warn("[env] PLATFORM_MNEMONIC:", err.message);
+    });
 } else {
-  try {
-    const { addr } = algosdk.mnemonicToSecretKey(platformMn);
-    console.log("[env] PLATFORM_MNEMONIC: valid treasury", addr.slice(0, 8) + "…");
-  } catch {
-    console.warn("[env] PLATFORM_MNEMONIC: invalid (must be 25-word Algorand phrase)");
-  }
+  console.warn(
+    `[env] PLATFORM_MNEMONIC: invalid (${platformProbe.wordCount} words; use 25-word Algorand or 24-word Pera Universal phrase)`
+  );
 }

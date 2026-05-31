@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import algosdk, { waitForConfirmation } from "algosdk";
+import { getPlatformTreasuryKey } from "./platformTreasuryKey.js";
 
 /**
  * On-chain proof log: platform → PROOF_LOG_ADDRESS with note proof of intelligence:<sha256hex>
@@ -49,7 +50,8 @@ export async function submitProofOfIntelligence({
     const token = process.env.ALGOD_TOKEN || "";
     const client = new algosdk.Algodv2(token, server, "");
 
-    const { addr, sk } = algosdk.mnemonicToSecretKey(mn);
+    const treasury = await getPlatformTreasuryKey();
+    const { addr } = treasury;
     const sp = await client.getTransactionParams().do();
     const amount = 1000;
 
@@ -60,7 +62,7 @@ export async function submitProofOfIntelligence({
       note,
       suggestedParams: sp,
     });
-    const signed = txn.signTxn(sk);
+    const signed = await treasury.signTransaction(txn);
     const { txId } = await client.sendRawTransaction(signed).do();
     await waitForConfirmation(client, txId, 6);
     return txId;

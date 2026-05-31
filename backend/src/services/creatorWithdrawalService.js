@@ -3,6 +3,10 @@ import { ApiUsageLog } from "../models/ApiUsageLog.js";
 import { Service } from "../models/Service.js";
 import { Withdrawal } from "../models/Withdrawal.js";
 import { algoToMicroAlgos, fetchAccountBalanceMicroAlgos } from "./algorandService.js";
+import {
+  getPlatformTreasuryKey,
+  treasuryConfigError,
+} from "./platformTreasuryKey.js";
 import { canonicalWalletAddress, creatorServicesOwnedBy } from "../utils/userWallet.js";
 
 export const MIN_WITHDRAWAL_ALGO = 0.1;
@@ -23,28 +27,6 @@ function getAlgodClient() {
   ).replace(/\/$/, "");
   const token = process.env.ALGOD_TOKEN || "";
   return new algosdk.Algodv2(token, server, "");
-}
-
-function treasuryConfigError(message, code) {
-  return Object.assign(new Error(message), { status: 503, code });
-}
-
-function getPlatformTreasuryKey() {
-  const mn = process.env.PLATFORM_MNEMONIC?.trim();
-  if (!mn) {
-    throw treasuryConfigError(
-      "Creator withdrawals are not enabled on this server (PLATFORM_MNEMONIC is not set).",
-      "TREASURY_NOT_CONFIGURED"
-    );
-  }
-  try {
-    return algosdk.mnemonicToSecretKey(mn);
-  } catch {
-    throw treasuryConfigError(
-      "Platform treasury mnemonic is invalid. Use the full 25-word Algorand recovery phrase from Pera.",
-      "TREASURY_INVALID_MNEMONIC"
-    );
-  }
 }
 
 async function getCreatorServiceIds(creatorWallet) {
@@ -94,7 +76,8 @@ export async function computeCreatorWithdrawalBalances(creatorWallet) {
 }
 
 async function submitTreasuryPayout({ creatorWallet, amountAlgo, withdrawalId }) {
-  const { addr, sk } = getPlatformTreasuryKey();
+  const treasury = await getPlatformTreasuryKey();
+  const { addr } = treasury;
   const receiver = canonicalWalletAddress(creatorWallet);
   const microAlgos = algoToMicroAlgos(amountAlgo);
 
@@ -116,7 +99,7 @@ async function submitTreasuryPayout({ creatorWallet, amountAlgo, withdrawalId })
     note,
     suggestedParams: sp,
   });
-  const signed = txn.signTxn(sk);
+  const signed = await treasury.signTransaction(txn);
   const { txId } = await client.sendRawTransaction(signed).do();
   await waitForConfirmation(client, txId, 6);
   return txId;
@@ -161,7 +144,7 @@ export async function requestCreatorWithdrawal({ creatorWallet, userId, amountAl
   }
 
   // Fail fast before creating a pending row if treasury cannot sign payouts.
-  getPlatformTreasuryKey();
+  await getPlatformTreasuryKey();
 
   const withdrawal = await Withdrawal.create({
     creatorWallet: wallet,
