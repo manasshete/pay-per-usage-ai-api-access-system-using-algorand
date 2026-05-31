@@ -22,6 +22,7 @@ export default function CreatorDashboard() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [gwData, setGwData] = useState(null);
 
   const apiBase = getPublicApiBase();
   const proxyExample = `${apiBase}/api/use`;
@@ -49,6 +50,14 @@ export default function CreatorDashboard() {
       setWebhooks(wh ?? []);
       setDeliveries(del ?? []);
       setWithdrawalData(wd);
+
+      // Fetch gateway developer dashboard (best-effort)
+      try {
+        const { data: gw } = await api.get("/api/gateway/developer/dashboard");
+        setGwData(gw);
+      } catch {
+        // Gateway data is optional
+      }
     } catch {
       toast.error("Failed to load dashboard");
     } finally {
@@ -226,6 +235,8 @@ export default function CreatorDashboard() {
     { id: "endpoints", label: "Endpoints & Analytics" },
     { id: "webhooks", label: "Webhooks & Events" },
     { id: "withdrawals", label: "Earnings & Payouts" },
+    { id: "gateway", label: "Gateway v2", href: "/creator/gateway" },
+    { id: "gateway-admin", label: "Gateway Admin", href: "/creator/gateway-admin" },
   ];
 
   return (
@@ -268,20 +279,30 @@ export default function CreatorDashboard() {
         </div>
 
         <div className="flex gap-2 p-1 mb-8 bg-slate-200/40 backdrop-blur-md rounded-xl w-fit border border-slate-200/40">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id)}
-              className={`relative px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 ${
-                activeTab === tab.id
-                  ? "bg-white text-indigo-600 shadow-sm border border-slate-200/40"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+          {tabs.map((tab) =>
+            tab.href ? (
+              <Link
+                key={tab.id}
+                to={tab.href}
+                className="relative px-4 py-2.5 rounded-lg text-xs font-bold text-slate-500 hover:text-indigo-600 hover:bg-white/60 transition-all"
+              >
+                {tab.label}
+              </Link>
+            ) : (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`relative px-4 py-2.5 rounded-lg text-xs font-bold transition-all duration-200 ${
+                  activeTab === tab.id
+                    ? "bg-white text-indigo-600 shadow-sm border border-slate-200/40"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                {tab.label}
+              </button>
+            )
+          )}
         </div>
 
         {loading ? (
@@ -300,7 +321,36 @@ export default function CreatorDashboard() {
             >
               {activeTab === "endpoints" && (
                 <>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                  {/* Combined stats from legacy + gateway */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+                    {[
+                      { label: "Total revenue", value: gwData?.totals?.totalRevenueAlgo != null ? `${gwData.totals.totalRevenueAlgo.toFixed(4)} ALGO` : `${(stats?.totalRevenue ?? 0).toFixed(4)} ALGO`, icon: "payments", color: "text-emerald-500 bg-emerald-50 border-emerald-100" },
+                      { label: "Tokens served", value: ((stats?.totalTokensServed ?? 0) + (gwData?.totals?.legacyTokensServed ?? 0)).toLocaleString(), icon: "generating_tokens", color: "text-indigo-500 bg-indigo-50 border-indigo-100" },
+                      { label: "Total calls", value: gwData?.totals?.totalCalls ?? stats?.totalUses ?? 0, icon: "api", color: "text-violet-500 bg-violet-50 border-violet-100" },
+                      { label: "Endpoints", value: (stats?.serviceCount ?? 0) + (gwData?.apis?.length ?? 0), icon: "terminal", color: "text-amber-500 bg-amber-50 border-amber-100" },
+                    ].map((s, idx) => (
+                      <div key={idx} className="bg-white/70 backdrop-blur-md border border-slate-200/80 p-5 rounded-2xl shadow-sm flex flex-col justify-between hover:shadow-md hover:border-slate-300 transition-all duration-300">
+                        <div className="flex justify-between items-start">
+                          <span className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">{s.label}</span>
+                          <span className={`material-symbols-outlined text-[18px] p-1.5 rounded-lg border ${s.color}`}>{s.icon}</span>
+                        </div>
+                        <p className="font-headline text-2xl font-extrabold text-slate-900 mt-3">{s.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Gateway earnings breakdown */}
+                  {gwData?.earnings && (
+                    <div className="bg-gradient-to-r from-indigo-50/50 to-violet-50/50 backdrop-blur-md border border-indigo-200/40 rounded-2xl p-4 mb-4 flex flex-wrap gap-6 items-center text-xs">
+                      <span className="text-[10px] font-bold tracking-wider text-indigo-600 uppercase">Gateway Earnings</span>
+                      <span className="text-slate-600">Available: <span className="font-mono font-bold text-emerald-600">{(gwData.earnings.availableAlgo || 0).toFixed(4)} ALGO</span></span>
+                      <span className="text-slate-600">Pending: <span className="font-mono font-bold text-amber-600">{(gwData.earnings.pendingAlgo || 0).toFixed(4)} ALGO</span></span>
+                      <span className="text-slate-600">Paid out: <span className="font-mono font-bold text-slate-700">{(gwData.earnings.paidOutAlgo || 0).toFixed(4)} ALGO</span></span>
+                      <span className="text-slate-600">Consumers: <span className="font-mono font-bold">{gwData.activeConsumers || 0}</span></span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8" style={{ display: 'none' }}>
                     {[
                       { label: "Total revenue", value: `${(stats?.totalRevenue ?? 0).toFixed(4)} ALGO`, icon: "payments", color: "text-emerald-500 bg-emerald-50 border-emerald-100" },
                       { label: "Tokens served", value: (stats?.totalTokensServed ?? 0).toLocaleString(), icon: "generating_tokens", color: "text-indigo-500 bg-indigo-50 border-indigo-100" },

@@ -5,6 +5,9 @@ import algosdk from "algosdk";
 import { AccessToken } from "../models/AccessToken.js";
 import { Service } from "../models/Service.js";
 import { ApiUsageLog } from "../models/ApiUsageLog.js";
+import { UsageRecord } from "../models/UsageRecord.js";
+import { User } from "../models/User.js";
+import { ProxyApi } from "../models/ProxyApi.js";
 import { notifyCreatorPurchaseWebhooks } from "../services/creatorWebhookDispatcher.js";
 import {
   algoToMicroAlgos,
@@ -367,6 +370,49 @@ async function completeFlow(req, res) {
         }
       } catch (err) {
         console.error("[use] proof-of-intelligence async", err?.message || err);
+      }
+    })();
+
+    // --- Cross-link: write a UsageRecord so gateway dashboard shows legacy calls ---
+    void (async () => {
+      try {
+        const rate = Number(process.env.ALGO_USD_CENTS_PER_ALGO || 35);
+        const costCents = Math.round(chargeAlgo * rate);
+
+        // Find the user's MongoDB _id and developer's _id for proper linking
+        const consumer = await User.findOne({ walletAddress: userWallet }).select("_id").lean();
+        const developer = await User.findOne({ walletAddress: creatorWallet }).select("_id").lean();
+
+        // Find a matching ProxyApi if one exists for this service
+        const proxyApi = await ProxyApi.findOne({ legacyServiceId: service._id }).select("_id").lean();
+
+        await UsageRecord.create({
+          requestId: `legacy-${paymentRef}`,
+          consumerId: consumer?._id || null,
+          developerId: developer?._id || null,
+          apiId: proxyApi?._id || service._id,
+          subscriptionId: null,
+          apiKeyPrefix: auth.key?.slice(0, 12) || null,
+          projectId: null,
+          timestamp: ts,
+          method: "POST",
+          endpoint: "/api/use",
+          requestStatus: "success",
+          httpStatus: 200,
+          responseTimeMs: null,
+          tokensPrompt: pending.promptTokens || null,
+          tokensCompletion: pending.completionTokens || null,
+          tokensTotal: pending.totalTokens || null,
+          costUnits: 1,
+          costCents,
+          billingStatus: "charged",
+          errorMessage: null,
+        });
+      } catch (e) {
+        // Don't fail the main response if cross-link fails
+        if (e?.code !== 11000) {
+          console.warn("[use] cross-link UsageRecord failed:", e?.message);
+        }
       }
     })();
   } catch (logErr) {

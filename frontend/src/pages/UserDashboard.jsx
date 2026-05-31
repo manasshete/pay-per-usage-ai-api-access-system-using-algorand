@@ -12,17 +12,32 @@ export default function UserDashboard() {
   const [loading, setLoading] = useState(true);
   const [agentJson, setAgentJson] = useState(null);
   const [agentCopied, setAgentCopied] = useState(false);
+  const [gatewayData, setGatewayData] = useState(null);
+  const [profileData, setProfileData] = useState(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [k, u, ctx] = await Promise.all([
+      const requests = [
         api.get("/api/user/proxy-keys"),
         api.get("/api/user/usage?limit=50"),
         api.get("/api/services/agent-context"),
-      ]);
+      ];
+
+      // Fetch gateway consumer dashboard (may fail if not set up)
+      requests.push(
+        api.get("/api/gateway/consumer/dashboard").catch(() => ({ data: null }))
+      );
+      // Fetch profile summary (may fail)
+      requests.push(
+        api.get("/api/profile/summary").catch(() => ({ data: null }))
+      );
+
+      const [k, u, ctx, gw, profile] = await Promise.all(requests);
       setKeys(k.data ?? []);
       setUsage(u.data ?? []);
       setAgentJson(ctx.data ?? null);
+      setGatewayData(gw.data ?? null);
+      setProfileData(profile.data ?? null);
     } catch {
       toast.error("Failed to load dashboard");
     } finally {
@@ -66,6 +81,22 @@ export default function UserDashboard() {
     return () => document.removeEventListener("visibilitychange", onVis);
   }, [refresh]);
 
+  // Unified stats from both gateway + legacy
+  const gw = gatewayData || {};
+  const profile = profileData || {};
+  const gwSummary = profile.gatewaySummary || {};
+  const userSummary = profile.userSummary || {};
+
+  const totalApiCalls = (gw.totals?.apiCalls || 0) || (gwSummary.totalCalls || 0) + (userSummary.totalCalls || 0);
+  const totalTokens = (gw.totals?.tokens || 0) || (gwSummary.totalTokens || 0) + (userSummary.totalTokens || 0);
+  const balanceCents = gw.balanceCents ?? gwSummary.balanceCents ?? 0;
+  const balanceAlgo = gw.balanceAlgo ?? gwSummary.balanceAlgo ?? 0;
+  const rate = gw.rate || 35;
+
+  // Merge recent logs from gateway
+  const recentLogs = gw.recentLogs || gwSummary.recentLogs || [];
+  const subscriptions = gw.subscriptions || gwSummary.subscriptions || [];
+
   return (
     <div className="max-w-7xl">
       <h1 className="font-headline text-2xl font-semibold text-primary mb-2">Marketplace Home</h1>
@@ -73,28 +104,36 @@ export default function UserDashboard() {
         API economy and infrastructure overview for developer workflows.
       </p>
 
-
-
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5 mb-8">
         <div className="bg-white border border-surface-variant rounded-md p-4">
           <p className="text-xs text-on-surface-variant uppercase tracking-wide">Identity</p>
           <p className="text-sm mt-1 font-semibold text-primary">{user?.displayName || "User"}</p>
         </div>
         <div className="bg-white border border-surface-variant rounded-md p-4">
-          <p className="text-xs text-on-surface-variant uppercase tracking-wide">ALGO Balance</p>
-          <p className="text-sm mt-1 font-mono text-primary">{user?.walletAddress ? "Live in header" : "No wallet"}</p>
+          <p className="text-xs text-on-surface-variant uppercase tracking-wide">Gateway Balance</p>
+          <p className="text-sm mt-1 font-mono text-primary">
+            {balanceCents > 0 ? `${balanceAlgo.toFixed(4)} ALGO` : user?.walletAddress ? "0 ALGO" : "No wallet"}
+          </p>
+          {balanceCents > 0 && (
+            <p className="text-xs text-on-surface-variant font-mono mt-0.5">${(balanceCents / 100).toFixed(2)}</p>
+          )}
         </div>
         <div className="bg-white border border-surface-variant rounded-md p-4">
-          <p className="text-xs text-on-surface-variant uppercase tracking-wide">Active Endpoints</p>
-          <p className="text-2xl font-headline font-semibold text-primary mt-1">{keys.length}</p>
+          <p className="text-xs text-on-surface-variant uppercase tracking-wide">Total API Calls</p>
+          <p className="text-2xl font-headline font-semibold text-primary mt-1">{totalApiCalls}</p>
+          {gw.totals?.legacyCalls > 0 && (
+            <p className="text-xs text-on-surface-variant mt-0.5">
+              {gw.totals.gatewayCalls} gateway · {gw.totals.legacyCalls} legacy
+            </p>
+          )}
         </div>
         <div className="bg-white border border-surface-variant rounded-md p-4">
-          <p className="text-xs text-on-surface-variant uppercase tracking-wide">API Usage (recent)</p>
-          <p className="text-2xl font-headline font-semibold text-primary mt-1">{usage.length}</p>
+          <p className="text-xs text-on-surface-variant uppercase tracking-wide">Tokens Used</p>
+          <p className="text-2xl font-headline font-semibold text-primary mt-1">{totalTokens.toLocaleString()}</p>
         </div>
         <div className="bg-white border border-surface-variant rounded-md p-4">
-          <p className="text-xs text-on-surface-variant uppercase tracking-wide">Payment Activity</p>
-          <p className="text-2xl font-headline font-semibold text-primary mt-1">{usage.slice(0, 5).length}</p>
+          <p className="text-xs text-on-surface-variant uppercase tracking-wide">Active Subscriptions</p>
+          <p className="text-2xl font-headline font-semibold text-primary mt-1">{subscriptions.length}</p>
         </div>
       </section>
 
@@ -124,47 +163,80 @@ export default function UserDashboard() {
           </section>
 
           <section id="usage" className="bg-white border border-surface-variant rounded-md p-5">
-            <h2 className="font-semibold text-primary mb-4">API Activity</h2>
+            <h2 className="font-semibold text-primary mb-4">Unified API Activity</h2>
             <ul className="space-y-2 text-sm">
+              <li className="flex justify-between">
+                <span>Total API calls</span>
+                <span className="font-mono">{totalApiCalls}</span>
+              </li>
+              <li className="flex justify-between">
+                <span>Gateway balance</span>
+                <span className="font-mono">{balanceAlgo.toFixed(4)} ALGO</span>
+              </li>
+              <li className="flex justify-between">
+                <span>Legacy ALGO spent</span>
+                <span className="font-mono">
+                  {(gw.totals?.legacySpentAlgo || userSummary.totalSpent || 0).toFixed(4)} ALGO
+                </span>
+              </li>
+              <li className="flex justify-between">
+                <span>Gateway spent (this month)</span>
+                <span className="font-mono">
+                  {((gw.period?.spendAlgo?.month || 0)).toFixed(4)} ALGO
+                </span>
+              </li>
               <li className="flex justify-between">
                 <span>Active endpoints</span>
                 <span className="font-mono">{keys.length}</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Recent API calls</span>
-                <span className="font-mono">{usage.length}</span>
-              </li>
-              <li className="flex justify-between">
-                <span>ALGO spent (recent)</span>
-                <span className="font-mono">
-                  {usage.slice(0, 10).reduce((acc, row) => acc + Number(row.amountAlgo || 0), 0).toFixed(4)}
-                </span>
               </li>
             </ul>
           </section>
 
           <section className="bg-white border border-surface-variant rounded-md p-5">
-            <h2 className="font-semibold text-primary mb-4">Infrastructure Activity</h2>
+            <h2 className="font-semibold text-primary mb-4">Infrastructure</h2>
             <ul className="space-y-2 text-sm">
               <li className="flex justify-between">
-                <span>Recent payments</span>
-                <span className="font-mono">{usage.slice(0, 5).length}</span>
+                <span>Active subscriptions</span>
+                <span className="font-mono">{subscriptions.length}</span>
               </li>
               <li className="flex justify-between">
-                <span>x402 settlement</span>
-                <span className="text-on-surface-variant">Operational</span>
+                <span>Gateway system</span>
+                <span className="text-on-surface-variant">{gw.balanceCents != null ? "Connected" : "Not connected"}</span>
               </li>
               <li className="flex justify-between">
-                <span>Worker status</span>
-                <span className="text-on-surface-variant">Online</span>
+                <span>Legacy system</span>
+                <span className="text-on-surface-variant">{user?.walletAddress ? "Connected" : "No wallet"}</span>
               </li>
               <li className="flex justify-between">
-                <span>API call activity</span>
-                <span className="font-mono">{usage.length}</span>
+                <span>Low balance alert</span>
+                <span className={gw.lowBalance ? "text-amber-600 font-semibold" : "text-on-surface-variant"}>
+                  {gw.lowBalance ? "⚠ Low balance" : "OK"}
+                </span>
               </li>
             </ul>
           </section>
 
+          {/* Subscriptions */}
+          {subscriptions.length > 0 && (
+            <section className="lg:col-span-3 bg-white border border-surface-variant rounded-md p-5">
+              <h2 className="font-semibold text-primary mb-4">Gateway Subscriptions</h2>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {subscriptions.map((sub) => (
+                  <div key={sub.id} className="bg-white border border-surface-variant rounded-md p-4 text-sm">
+                    <p className="font-semibold">{sub.apiName || "API"}</p>
+                    <p className="text-on-surface-variant text-xs mt-1">
+                      {sub.pricingModel} · {sub.pricePerUnitAlgo?.toFixed(6) || "?"} ALGO/unit
+                    </p>
+                    {sub.proxyUrl && (
+                      <p className="font-mono text-xs break-all mt-2 text-primary">{sub.proxyUrl}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Legacy API Keys */}
           <section id="keys" className="lg:col-span-2 bg-white border border-surface-variant rounded-md p-5">
             <h2 className="font-semibold text-primary mb-4">My API Keys</h2>
             {keys.length === 0 ? (
@@ -188,18 +260,18 @@ export default function UserDashboard() {
             )}
           </section>
 
+          {/* Recent Activity (unified) */}
           <section className="bg-white border border-surface-variant rounded-md p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-primary">Recent API usage</h2>
-              {usage.length > 0 && (
-                <span className="text-xs text-on-surface-variant">{usage.length} call{usage.length !== 1 ? 's' : ''}</span>
+              <h2 className="font-semibold text-primary">Recent API Activity</h2>
+              {recentLogs.length > 0 && (
+                <span className="text-xs text-on-surface-variant">{recentLogs.length} call{recentLogs.length !== 1 ? 's' : ''}</span>
               )}
             </div>
-            {usage.length === 0 ? (
-              <p className="text-sm text-on-surface-variant">No proxy calls recorded yet.</p>
+            {recentLogs.length === 0 && usage.length === 0 ? (
+              <p className="text-sm text-on-surface-variant">No API calls recorded yet.</p>
             ) : (
               <div className="relative">
-                {/* Scroll container */}
                 <ul
                   className="space-y-2 text-sm overflow-y-auto pr-1"
                   style={{
@@ -208,28 +280,43 @@ export default function UserDashboard() {
                     scrollbarColor: '#c5c6cf transparent',
                   }}
                 >
-                  {usage.map((row) => (
+                  {(recentLogs.length > 0 ? recentLogs : usage).map((row) => (
                     <li
-                      key={row.id}
+                      key={row.id || row.requestId}
                       className="bg-white border border-surface-variant rounded-md px-4 py-3 flex flex-wrap justify-between gap-2 items-center"
                     >
                       <span className="text-on-surface-variant">
-                        {row.serviceTitle ?? "—"} · {row.aiProvider} / {row.modelName}
+                        {row.apiName || row.serviceTitle || "—"}
+                        {row.source && (
+                          <span className={`ml-1 text-[9px] px-1 py-0.5 rounded ${
+                            row.source === "gateway" ? "bg-blue-50 text-blue-700" : "bg-amber-50 text-amber-700"
+                          }`}>
+                            {row.source}
+                          </span>
+                        )}
                       </span>
                       <span
                         className={
-                          row.success === false
+                          (row.requestStatus === "failed" || row.success === false)
                             ? "text-xs px-2 py-0.5 rounded bg-amber-50 text-amber-900"
                             : "text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-700"
                         }
                       >
-                        {row.success === false ? "Paid · AI error" : "Completed"}
+                        {row.requestStatus === "failed" || row.success === false ? "Failed" : "Completed"}
                       </span>
                       <span className="font-mono shrink-0 text-xs">
-                        {Number(row.amountAlgo).toFixed(6)} ALGO
-                        {row.totalTokens != null ? ` · ${row.totalTokens} tok` : ""}
+                        {row.costAlgo != null
+                          ? `${Number(row.costAlgo).toFixed(6)} ALGO`
+                          : row.amountAlgo != null
+                            ? `${Number(row.amountAlgo).toFixed(6)} ALGO`
+                            : `${row.costCents || 0}¢`
+                        }
+                        {(row.tokensTotal || row.totalTokens) != null ? ` · ${row.tokensTotal || row.totalTokens} tok` : ""}
                       </span>
-                      {row.paymentTxId && (
+                      {row.responseTimeMs && (
+                        <span className="text-xs text-on-surface-variant">{row.responseTimeMs}ms</span>
+                      )}
+                      {(row.paymentTxId) && (
                         <a
                           href={`https://testnet.algoexplorer.io/tx/${row.paymentTxId}`}
                           target="_blank"
@@ -240,13 +327,12 @@ export default function UserDashboard() {
                         </a>
                       )}
                       <span className="text-xs text-on-surface-variant shrink-0">
-                        {row.createdAt ? new Date(row.createdAt).toLocaleString() : ""}
+                        {(row.timestamp || row.createdAt) ? new Date(row.timestamp || row.createdAt).toLocaleString() : ""}
                       </span>
                     </li>
                   ))}
                 </ul>
-                {/* Bottom fade — hints that more items exist */}
-                {usage.length > 3 && (
+                {(recentLogs.length > 3 || usage.length > 3) && (
                   <div
                     className="pointer-events-none absolute bottom-0 left-0 right-0 h-10 rounded-b-md"
                     style={{ background: 'linear-gradient(to bottom, transparent, white)' }}

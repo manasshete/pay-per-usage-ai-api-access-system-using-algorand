@@ -5,6 +5,7 @@ import { Service } from "../models/Service.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { encryptSecret } from "../utils/encrypt.js";
 import { canonicalWalletAddress, sameWallet } from "../utils/userWallet.js";
+import { syncServiceToProxyApi } from "../services/marketplaceMigration.js";
 
 const router = Router();
 
@@ -235,6 +236,9 @@ router.post(
       customEndpointUrl: aiProvider === "custom" ? String(customEndpointUrl).trim() : "",
       isPaused: false,
     });
+    void syncServiceToProxyApi(service._id).catch((e) =>
+      console.warn("[services] ProxyApi sync", e?.message)
+    );
     const { encryptedApiKey: _omit, ...safe } = service.toObject();
     res.status(201).json({
       ...safe,

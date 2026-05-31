@@ -4,14 +4,23 @@ import { User } from "../models/User.js";
 import { Service } from "../models/Service.js";
 import { AccessToken } from "../models/AccessToken.js";
 import { ApiUsageLog } from "../models/ApiUsageLog.js";
+import { UsageRecord } from "../models/UsageRecord.js";
+import { ProxyApi } from "../models/ProxyApi.js";
+import { GatewaySubscription } from "../models/GatewaySubscription.js";
+import { LedgerTransaction } from "../models/LedgerTransaction.js";
+import { DeveloperEarning } from "../models/DeveloperEarning.js";
 import { requireAuth } from "../middleware/auth.js";
 import { encryptSecret, decryptSecret } from "../utils/encrypt.js";
+import { getBalanceCents } from "../services/gatewayBalanceService.js";
 
 const router = Router();
 
+const RATE = () => Number(process.env.ALGO_USD_CENTS_PER_ALGO || 35);
+
 /**
  * GET /api/profile/summary
- * Retrieves Google profile info, linked wallet, creator APIs, and user usage history
+ * Retrieves Google profile info, linked wallet, creator APIs, and user usage history.
+ * Merges legacy ApiUsageLog data with gateway UsageRecord data for a unified view.
  */
 router.get("/summary", requireAuth, async (req, res) => {
   try {
@@ -20,9 +29,12 @@ router.get("/summary", requireAuth, async (req, res) => {
       return res.status(404).json({ error: "User profile not found." });
     }
 
+    const rate = RATE();
+    const userId = user._id;
+
     const responseData = {
       profile: {
-        id: user._id,
+        id: userId,
         email: user.email || null,
         displayName: user.displayName || "Google User",
         photoURL: user.photoURL || "https://lh3.googleusercontent.com/a/default-user",
@@ -32,106 +44,218 @@ router.get("/summary", requireAuth, async (req, res) => {
       },
       creatorSummary: null,
       userSummary: null,
+      gatewaySummary: null,
     };
 
     const walletAddress = user.walletAddress;
 
-    // Fetch Creator Statistics if a wallet is connected
-    if (walletAddress) {
-      if (user.role === "creator") {
-        const services = await Service.find({ creatorWallet: walletAddress });
-        
-        let totalRevenue = 0;
-        let totalUses = 0;
-        services.forEach((s) => {
-          totalRevenue += s.totalRevenue || 0;
-          totalUses += s.totalUses || 0;
-        });
+    // ——— Gateway summary (always available, even without wallet) ———
+    try {
+      const balanceCents = await getBalanceCents(userId);
 
-        // Get logs for services they created
-        const recentSales = await ApiUsageLog.find({ developerWallet: walletAddress })
+      const [gatewayUsageAgg, recentGatewayLogs, subscriptions, recentTx] = await Promise.all([
+        UsageRecord.aggregate([
+          { $match: { consumerId: userId, billingStatus: "charged" } },
+          {
+            $group: {
+              _id: null,
+              totalCalls: { $sum: 1 },
+              totalCostCents: { $sum: "$costCents" },
+              totalTokens: { $sum: { $ifNull: ["$tokensTotal", 0] } },
+            },
+          },
+        ]),
+        UsageRecord.find({ consumerId: userId })
+          .sort({ timestamp: -1 })
+          .limit(15)
+          .populate("apiId", "name proxySlug category")
+          .lean(),
+        GatewaySubscription.find({ consumerId: userId, isActive: true })
+          .populate("apiId", "name proxySlug pricePerUnit pricingModel")
+          .lean(),
+        LedgerTransaction.find({ userId })
+          .sort({ createdAt: -1 })
+          .limit(15)
+          .lean(),
+      ]);
+
+      const gwAgg = gatewayUsageAgg[0] || {};
+      responseData.gatewaySummary = {
+        balanceCents,
+        balanceAlgo: balanceCents / rate,
+        totalCalls: gwAgg.totalCalls || 0,
+        totalSpentCents: gwAgg.totalCostCents || 0,
+        totalSpentAlgo: (gwAgg.totalCostCents || 0) / rate,
+        totalTokens: gwAgg.totalTokens || 0,
+        activeSubscriptions: subscriptions.length,
+        subscriptions: subscriptions.map((s) => ({
+          id: s._id,
+          apiName: s.apiId?.name,
+          proxySlug: s.apiId?.proxySlug,
+          pricePerUnitCents: s.apiId?.pricePerUnit,
+          pricePerUnitAlgo: (s.apiId?.pricePerUnit || 0) / rate,
+          pricingModel: s.apiId?.pricingModel,
+        })),
+        recentLogs: recentGatewayLogs.map((l) => ({
+          id: l._id,
+          requestId: l.requestId,
+          apiName: l.apiId?.name,
+          proxySlug: l.apiId?.proxySlug,
+          timestamp: l.timestamp,
+          method: l.method,
+          httpStatus: l.httpStatus,
+          costCents: l.costCents,
+          costAlgo: (l.costCents || 0) / rate,
+          tokensTotal: l.tokensTotal,
+          requestStatus: l.requestStatus,
+          responseTimeMs: l.responseTimeMs,
+        })),
+        recentTransactions: recentTx.map((tx) => ({
+          ...tx,
+          amountAlgo: (tx.amountCents || 0) / rate,
+        })),
+      };
+    } catch (e) {
+      console.warn("[profile-summary] gateway data failed:", e?.message);
+    }
+
+    // ——— Gateway developer earnings (for creators) ———
+    if (user.role === "creator") {
+      try {
+        const [devEarningsAgg, proxyApis] = await Promise.all([
+          DeveloperEarning.aggregate([
+            { $match: { developerId: userId } },
+            {
+              $group: {
+                _id: "$status",
+                total: { $sum: "$earningCents" },
+                count: { $sum: 1 },
+              },
+            },
+          ]),
+          ProxyApi.find({ developerId: userId }).select("-authHeaderEncrypted").lean(),
+        ]);
+
+        const earningsByStatus = Object.fromEntries(devEarningsAgg.map((r) => [r._id, r.total]));
+        responseData.creatorSummary = responseData.creatorSummary || {};
+        responseData.creatorSummary.gatewayEarnings = {
+          availableCents: earningsByStatus.available || 0,
+          availableAlgo: (earningsByStatus.available || 0) / rate,
+          paidOutCents: earningsByStatus.paid_out || 0,
+          paidOutAlgo: (earningsByStatus.paid_out || 0) / rate,
+          proxyApiCount: proxyApis.length,
+          proxyApis: proxyApis.map((a) => ({
+            id: a._id,
+            name: a.name,
+            proxySlug: a.proxySlug,
+            pricePerUnit: a.pricePerUnit,
+            pricingModel: a.pricingModel,
+            callCount: a.callCount,
+            isActive: a.isActive,
+          })),
+        };
+      } catch (e) {
+        console.warn("[profile-summary] gateway creator data failed:", e?.message);
+      }
+    }
+
+    // ——— Legacy stats (only if wallet connected) ———
+    if (walletAddress) {
+      try {
+        if (user.role === "creator") {
+          const services = await Service.find({ creatorWallet: walletAddress });
+          
+          let totalRevenue = 0;
+          let totalUses = 0;
+          services.forEach((s) => {
+            totalRevenue += s.totalRevenue || 0;
+            totalUses += s.totalUses || 0;
+          });
+
+          const recentSales = await ApiUsageLog.find({ developerWallet: walletAddress })
+            .populate("serviceId", "title")
+            .sort({ createdAt: -1 })
+            .limit(10);
+
+          responseData.creatorSummary = {
+            ...(responseData.creatorSummary || {}),
+            servicesCount: services.length,
+            totalRevenue,
+            totalUses,
+            services: services.map((s) => ({
+              id: s._id,
+              title: s.title,
+              description: s.description,
+              pricePerThousandTokens: s.pricePerThousandTokens,
+              minimumChargeAlgo: s.minimumChargeAlgo,
+              totalRevenue: s.totalRevenue,
+              totalUses: s.totalUses,
+              aiProvider: s.aiProvider,
+              modelName: s.modelName,
+              isPaused: s.isPaused,
+            })),
+            recentSales: recentSales.map((log) => ({
+              id: log._id,
+              userWallet: log.userWallet,
+              serviceTitle: log.serviceId?.title || "Unknown API",
+              amountAlgo: log.amountAlgo || log.chargeAlgo || 0,
+              promptTokens: log.promptTokens || 0,
+              completionTokens: log.completionTokens || 0,
+              success: log.success,
+              createdAt: log.createdAt,
+            })),
+          };
+        }
+
+        // User Statistics
+        const purchasedKeys = await AccessToken.find({ userWallet: walletAddress })
+          .populate("serviceId", "title description pricePerThousandTokens minimumChargeAlgo aiProvider modelName");
+
+        const recentCalls = await ApiUsageLog.find({ userWallet: walletAddress })
           .populate("serviceId", "title")
           .sort({ createdAt: -1 })
           .limit(10);
 
-        responseData.creatorSummary = {
-          servicesCount: services.length,
-          totalRevenue,
-          totalUses,
-          services: services.map((s) => ({
-            id: s._id,
-            title: s.title,
-            description: s.description,
-            pricePerThousandTokens: s.pricePerThousandTokens,
-            minimumChargeAlgo: s.minimumChargeAlgo,
-            totalRevenue: s.totalRevenue,
-            totalUses: s.totalUses,
-            aiProvider: s.aiProvider,
-            modelName: s.modelName,
-            isPaused: s.isPaused,
+        const allLogs = await ApiUsageLog.find({ userWallet: walletAddress, success: true });
+        let totalSpent = 0;
+        let totalTokens = 0;
+        allLogs.forEach((log) => {
+          totalSpent += log.amountAlgo || log.chargeAlgo || 0;
+          totalTokens += log.totalTokens || 0;
+        });
+
+        responseData.userSummary = {
+          totalSpent,
+          totalCalls: allLogs.length,
+          totalTokens,
+          activeKeys: purchasedKeys.map((token) => ({
+            id: token._id,
+            key: token.key,
+            isUsed: token.isUsed,
+            service: token.serviceId ? {
+              id: token.serviceId._id,
+              title: token.serviceId.title,
+              description: token.serviceId.description,
+              aiProvider: token.serviceId.aiProvider,
+              modelName: token.serviceId.modelName,
+              pricePerThousandTokens: token.serviceId.pricePerThousandTokens,
+              minimumChargeAlgo: token.serviceId.minimumChargeAlgo,
+            } : null,
           })),
-          recentSales: recentSales.map((log) => ({
+          recentCalls: recentCalls.map((log) => ({
             id: log._id,
-            userWallet: log.userWallet,
             serviceTitle: log.serviceId?.title || "Unknown API",
             amountAlgo: log.amountAlgo || log.chargeAlgo || 0,
-            promptTokens: log.promptTokens || 0,
-            completionTokens: log.completionTokens || 0,
+            totalTokens: log.totalTokens || 0,
             success: log.success,
             createdAt: log.createdAt,
+            paymentTxId: log.paymentTxId,
+            proofTxId: log.proofTxId,
           })),
         };
+      } catch (e) {
+        console.warn("[profile-summary] legacy data failed:", e?.message);
       }
-
-      // Fetch User Statistics
-      // 1. Purchased keys (Access Tokens)
-      const purchasedKeys = await AccessToken.find({ userWallet: walletAddress })
-        .populate("serviceId", "title description pricePerThousandTokens minimumChargeAlgo aiProvider modelName");
-
-      // 2. Recent usage logs (calls they made)
-      const recentCalls = await ApiUsageLog.find({ userWallet: walletAddress })
-        .populate("serviceId", "title")
-        .sort({ createdAt: -1 })
-        .limit(10);
-
-      // 3. Compute aggregate spent stats
-      const allLogs = await ApiUsageLog.find({ userWallet: walletAddress, success: true });
-      let totalSpent = 0;
-      let totalTokens = 0;
-      allLogs.forEach((log) => {
-        totalSpent += log.amountAlgo || log.chargeAlgo || 0;
-        totalTokens += log.totalTokens || 0;
-      });
-
-      responseData.userSummary = {
-        totalSpent,
-        totalCalls: allLogs.length,
-        totalTokens,
-        activeKeys: purchasedKeys.map((token) => ({
-          id: token._id,
-          key: token.key,
-          isUsed: token.isUsed,
-          service: token.serviceId ? {
-            id: token.serviceId._id,
-            title: token.serviceId.title,
-            description: token.serviceId.description,
-            aiProvider: token.serviceId.aiProvider,
-            modelName: token.serviceId.modelName,
-            pricePerThousandTokens: token.serviceId.pricePerThousandTokens,
-            minimumChargeAlgo: token.serviceId.minimumChargeAlgo,
-          } : null,
-        })),
-        recentCalls: recentCalls.map((log) => ({
-          id: log._id,
-          serviceTitle: log.serviceId?.title || "Unknown API",
-          amountAlgo: log.amountAlgo || log.chargeAlgo || 0,
-          totalTokens: log.totalTokens || 0,
-          success: log.success,
-          createdAt: log.createdAt,
-          paymentTxId: log.paymentTxId,
-          proofTxId: log.proofTxId,
-        })),
-      };
     }
 
     res.json(responseData);

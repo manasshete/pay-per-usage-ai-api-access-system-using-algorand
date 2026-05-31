@@ -1,4 +1,4 @@
-// Trigger reload to restart backend
+// Trigger reload to restart backend - port 5000
 import "./loadEnv.js";
 import fs from "fs";
 import path from "path";
@@ -24,7 +24,11 @@ import devRoutes from "./routes/dev.js";
 import studioRoutes from "./routes/studio.routes.js";
 import x402Routes from "./routes/x402.js";
 import reviewsRoutes from "./routes/reviews.js";
+import proxyRoutes from "./routes/proxy.js";
+import gatewayRoutes from "./routes/gateway.js";
 import { startPublishingWorker } from "./workers/publishingWorker.js";
+import { startGatewayWorker } from "./workers/gatewayWorker.js";
+import { startGatewayScheduler } from "./services/gatewayScheduler.js";
 import { startScheduledPublishScheduler } from "./services/scheduledPublishScheduler.js";
 import { loadClipCraftConfig } from "./studio/clipcraft/config/loadConfig.js";
 import { getClipCraftRuntime } from "./studio/clipcraft/production/ClipCraftRuntime.js";
@@ -84,6 +88,8 @@ app.use("/api/dev", devRoutes);
 app.use("/api/studio", studioRoutes);
 app.use("/api/x402", x402Routes);
 app.use("/api/reviews", reviewsRoutes);
+app.use("/api/gateway", gatewayRoutes);
+app.use("/proxy/:slug", proxyRoutes);
 
 app.get("/x402-test", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "..", "frontend", "x402-test.html"));
@@ -172,6 +178,16 @@ connectDb()
       startPublishingWorker();
     } catch (e) {
       console.warn("[publishingWorker] failed to start:", e.message);
+    }
+    try {
+      startGatewayWorker();
+    } catch (e) {
+      console.warn("[gatewayWorker] failed to start:", e.message);
+    }
+    try {
+      startGatewayScheduler();
+    } catch (e) {
+      console.warn("[gatewayScheduler] failed to start:", e.message);
     }
     try {
       startScheduledPublishScheduler();
