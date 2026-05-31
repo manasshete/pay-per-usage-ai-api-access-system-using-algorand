@@ -3,6 +3,13 @@ import { NODE_DEFAULTS } from "./WorkflowCanvas.jsx";
 
 const PALETTE = [
   { type: "input", label: "Input", icon: "input", desc: "Text or URL trigger" },
+  { type: "promptGen", label: "Prompt Generator", icon: "auto_awesome", desc: "Gemini prompt (Studio)" },
+  { type: "imageGen", label: "Image Generator", icon: "image", desc: "Gemini 16:9 image render" },
+  { type: "agenticText", label: "Agentic · Text", icon: "article", desc: "Gemini script / research" },
+  { type: "agenticImage", label: "Agentic · Image", icon: "image", desc: "Keyframes (Imagen / Gemini)" },
+  { type: "agenticVideo", label: "Agentic · Video", icon: "movie", desc: "Veo 2 video (Vertex)" },
+  { type: "agenticAudio", label: "Agentic · Audio", icon: "mic", desc: "Gemini TTS narration" },
+  { type: "agenticCode", label: "Agentic · Code", icon: "code", desc: "Gemma Python sandbox" },
   { type: "ai", label: "AI Agent", icon: "smart_toy", desc: "Groq LLM step" },
   { type: "logic", label: "Logic", icon: "call_split", desc: "Branch or delay" },
   { type: "output", label: "Output", icon: "output", desc: "Structured JSON result" },

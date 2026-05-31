@@ -29,7 +29,24 @@ const nodeDataSchema = new mongoose.Schema(
 const workflowNodeSchema = new mongoose.Schema(
   {
     id: { type: String, required: true },
-    type: { type: String, enum: ["input", "ai", "logic", "output", "blog"], required: true },
+    type: {
+      type: String,
+      enum: [
+        "input",
+        "ai",
+        "logic",
+        "output",
+        "blog",
+        "promptGen",
+        "imageGen",
+        "agenticText",
+        "agenticImage",
+        "agenticVideo",
+        "agenticAudio",
+        "agenticCode",
+      ],
+      required: true,
+    },
     position: { type: positionSchema, default: () => ({ x: 0, y: 0 }) },
     data: { type: nodeDataSchema, default: () => ({}) },
   },

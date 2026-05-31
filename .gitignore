@@ -10,3 +10,8 @@ chatbot/chat-backend/node_modules/
 .git/
 .github/
 .npmrc
+backend/uploads/
+backend/outputs/
+# GCP service account keys — never commit
+sentinal-ai-*.json
+**/service-account*.json

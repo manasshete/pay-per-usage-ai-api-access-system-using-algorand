@@ -17,6 +17,17 @@ export function estimateRunCost(workflow) {
     if (node.type === "blog") {
       estimatedTokens += (node.data?.wordCount || 1000) + 800;
     }
+    if (node.type === "promptGen") {
+      estimatedTokens += 1200;
+    }
+    if (node.type === "imageGen") {
+      estimatedTokens += 800;
+    }
+    if (node.type === "agenticText") estimatedTokens += 1500;
+    if (node.type === "agenticImage") estimatedTokens += 2000;
+    if (node.type === "agenticVideo") estimatedTokens += 2500;
+    if (node.type === "agenticAudio") estimatedTokens += 600;
+    if (node.type === "agenticCode") estimatedTokens += 1000;
   }
   const estimatedCredits =
     nodes.reduce((sum, n) => sum + (n.data?.estimatedCredits || 0), 0) ||

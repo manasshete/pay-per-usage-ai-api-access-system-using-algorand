@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 import { api } from "../api/client.js";
 import { WORKFLOW_API } from "../api/workflowApi.js";
 
-const CATEGORIES = ["All", "Writing", "Code", "Data", "Research", "Media"];
+const CATEGORIES = ["All", "Agentic", "Creative", "Writing", "Media", "Research", "Code", "Data"];
 
 export default function WorkflowTemplates() {
   const [category, setCategory] = useState("All");

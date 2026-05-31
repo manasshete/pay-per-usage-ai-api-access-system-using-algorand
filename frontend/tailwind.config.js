@@ -50,6 +50,16 @@ export default {
         "on-secondary-container": "#007261",
         "inverse-on-surface": "#f1f1f1",
         primary: "#031634",
+        sentinel: {
+          bg: "#0a0a0f",
+          surface: "#12121a",
+          border: "#1e1e2e",
+          accent: "#6366f1",
+          glow: "#818cf8",
+          success: "#22d3ee",
+          danger: "#f43f5e",
+          warning: "#f59e0b",
+        },
       },
       borderRadius: {
         DEFAULT: "0.125rem",
@@ -63,18 +73,6 @@ export default {
         body: ["DM Sans", "sans-serif"],
         label: ["DM Sans", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
-      },
-      colors: {
-        sentinel: {
-          bg: "#0a0a0f",
-          surface: "#12121a",
-          border: "#1e1e2e",
-          accent: "#6366f1",
-          glow: "#818cf8",
-          success: "#22d3ee",
-          danger: "#f43f5e",
-          warning: "#f59e0b",
-        },
       },
       backdropBlur: {
         xs: "2px",

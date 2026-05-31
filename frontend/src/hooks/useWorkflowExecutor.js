@@ -6,8 +6,26 @@ import { getBurnerBalance, sendBurnerPayment, getDefaultAlgodServer } from "../w
 import { useAuth } from "../context/AuthContext.jsx";
 import { useNodeExecution } from "../context/NodeExecutionContext.jsx";
 import { extractBlogResult } from "../utils/workflowBlog.js";
+import { playCompletionSound } from "../utils/completionSound.js";
 
 const STORAGE_KEY = "sentinal_token";
+
+function mapNodeStatus(status) {
+  if (status === "completed" || status === "success") return "success";
+  if (status === "error") return "error";
+  if (status === "running") return "running";
+  if (status === "queued") return "queued";
+  return null;
+}
+
+function syncNodeStatusesFromRun(runData, setNodeStatuses) {
+  const statuses = {};
+  for (const nr of runData?.nodeResults || []) {
+    const mapped = mapNodeStatus(nr.status);
+    if (mapped) statuses[nr.nodeId] = mapped;
+  }
+  setNodeStatuses((prev) => ({ ...prev, ...statuses }));
+}
 
 async function streamRunEvents(runId, onEvent) {
   const token = localStorage.getItem(STORAGE_KEY);
@@ -53,6 +71,7 @@ export function useWorkflowExecutor(workflowId) {
     setIsRunning(true);
     setLiveLogs([]);
     setNodeStatuses({});
+    let activeRunId = null;
 
     try {
       const { data: estRes } = await api.post(WORKFLOW_API.estimate(workflowId));
@@ -102,19 +121,51 @@ export function useWorkflowExecutor(workflowId) {
 
       const runId = runRes?.data?.runId;
       if (!runId) throw new Error("No run id returned");
+      activeRunId = runId;
       setRunId(runId);
+
+      setCurrentRun((prev) => ({ ...prev, _id: runId, status: "running" }));
+
+      let heardCompleteEvent = false;
 
       await streamRunEvents(runId, (evt) => {
         if (evt.type === "log") setLiveLogs((prev) => [...prev, evt.line]);
         if (evt.nodeId && evt.status) {
-          setNodeStatuses((prev) => ({ ...prev, [evt.nodeId]: evt.status }));
+          const mapped = mapNodeStatus(evt.status) || evt.status;
+          setNodeStatuses((prev) => ({ ...prev, [evt.nodeId]: mapped }));
         }
         if (evt.type === "complete") {
-          toast.success(`Run ${evt.status}`);
-          if (evt.structuredResult) {
-            setCurrentRun((prev) =>
-              prev ? { ...prev, structuredResult: evt.structuredResult, status: evt.status } : prev
-            );
+          heardCompleteEvent = true;
+          setIsRunning(false);
+          if (evt.nodeResults?.length) {
+            syncNodeStatusesFromRun({ nodeResults: evt.nodeResults }, setNodeStatuses);
+          }
+          setCurrentRun((prev) => ({
+            ...prev,
+            _id: runId,
+            status: evt.status,
+            nodeResults: evt.nodeResults?.length
+              ? evt.nodeResults.map((nr) => ({
+                  nodeId: nr.nodeId,
+                  status: nr.status === "completed" ? "completed" : nr.status,
+                  output: prev?.nodeResults?.find((p) => p.nodeId === nr.nodeId)?.output || "",
+                }))
+              : prev?.nodeResults,
+            totalCreditsDeducted: evt.totalCredits ?? prev?.totalCreditsDeducted,
+            totalTokensUsed: evt.totalTokens ?? prev?.totalTokensUsed,
+            runtimeMs: evt.runtimeMs ?? prev?.runtimeMs,
+            structuredResult: evt.structuredResult ?? prev?.structuredResult,
+            saveWarning: evt.saveWarning || null,
+          }));
+          if (evt.status === "completed") {
+            playCompletionSound();
+            if (evt.saveWarning) {
+              toast.error(evt.saveWarning, { duration: 7000 });
+            } else {
+              toast.success("Workflow complete — results are ready", { duration: 5000 });
+            }
+          } else {
+            toast.error(`Workflow ${evt.status}`);
           }
         }
       });
@@ -122,11 +173,7 @@ export function useWorkflowExecutor(workflowId) {
       const { data: finalRun } = await api.get(WORKFLOW_API.runOne(runId));
       if (finalRun?.success) {
         setCurrentRun(finalRun.data);
-        const statuses = {};
-        for (const nr of finalRun.data.nodeResults || []) {
-          statuses[nr.nodeId] = nr.status === "completed" ? "success" : nr.status;
-        }
-        setNodeStatuses(statuses);
+        syncNodeStatusesFromRun(finalRun.data, setNodeStatuses);
         const blog = extractBlogResult(finalRun.data);
         if (blog?.blogPostId) {
           if (blog.status === "published") {
@@ -134,10 +181,24 @@ export function useWorkflowExecutor(workflowId) {
           } else {
             toast.success(`Blog ready: ${blog.title}`, { duration: 5000 });
           }
+        } else if (finalRun.data.status === "completed" && !heardCompleteEvent) {
+          playCompletionSound();
+          toast.success("Workflow complete — results are ready", { duration: 5000 });
         }
       }
     } catch (e) {
       toast.error(e?.response?.data?.error || e.message || "Run failed");
+      if (activeRunId) {
+        try {
+          const { data: finalRun } = await api.get(WORKFLOW_API.runOne(activeRunId));
+          if (finalRun?.success) {
+            setCurrentRun(finalRun.data);
+            syncNodeStatusesFromRun(finalRun.data, setNodeStatuses);
+          }
+        } catch {
+          /* ignore */
+        }
+      }
     } finally {
       setIsRunning(false);
     }

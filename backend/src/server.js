@@ -92,11 +92,36 @@ app.use("/api", (_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
 
+const pipelineOutputDir = path.join(__dirname, "..", "outputs", "pipeline");
+app.use("/outputs/pipeline", express.static(pipelineOutputDir));
+const workflowOutputDir = path.join(__dirname, "..", "outputs", "workflow");
+app.use("/outputs/workflow", express.static(workflowOutputDir));
+
 if (process.env.NODE_ENV === "production") {
   const dist = path.join(__dirname, "..", "..", "frontend", "dist");
-  app.use(express.static(dist, { index: false }));
-  app.get('*', (req, res, next) => {
+
+  /** Hashed Vite assets — long cache; missing files must not fall through to SPA HTML. */
+  const isStaticAsset = (p) => /\.(js|mjs|css|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot)$/i.test(p);
+
+  app.use(
+    express.static(dist, {
+      index: false,
+      setHeaders(res, filePath) {
+        if (filePath.replace(/\\/g, "/").endsWith("/index.html")) {
+          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+        }
+      },
+    })
+  );
+
+  app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
+    if (isStaticAsset(req.path)) {
+      return res.status(404).type("text/plain").send("Asset not found");
+    }
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
     res.sendFile(path.join(dist, "index.html"), (err) => {
       if (err) next(err);
     });

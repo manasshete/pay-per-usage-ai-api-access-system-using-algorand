@@ -51,6 +51,9 @@ function sanitizeWorkflowPayload(body) {
   return { name, description, nodes, edges: body.edges || [] };
 }
 
+const CREATIVE_TEMPLATE_NAME = "Creative: Prompt → Image";
+const AGENTIC_TEMPLATE_NAME = "Agentic: Script → Images → Video → Audio";
+
 const DEFAULT_TEMPLATES = [
   {
     name: "Topic → Blog → Publish",
@@ -195,12 +198,594 @@ const DEFAULT_TEMPLATES = [
       ],
     },
   },
+  {
+    name: "Creative: Prompt → Image",
+    category: "Creative",
+    description:
+      "Automated Studio pipeline — Input goal → Advanced Prompt Generator (Gemini) → Image Generator (16:9)",
+    tags: ["creative", "prompt", "image", "gemini", "studio"],
+    estimatedCreditsPerRun: 0.012,
+    isFeatured: true,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "cr_in",
+          type: "input",
+          position: { x: 60, y: 220 },
+          data: {
+            label: "Image goal",
+            inputType: "text",
+            value: "A photorealistic 16:9 hero visual for a fintech SaaS landing page, bold lighting",
+            config: {},
+          },
+        },
+        {
+          id: "cr_prompt",
+          type: "promptGen",
+          position: { x: 300, y: 220 },
+          data: {
+            label: "Prompt Generator",
+            category: "Image Generation",
+            mode: "advanced",
+            type: "Creative Writing",
+            extraInstructions: "Optimize for Gemini image generation. Include composition, lighting, and style.",
+            estimatedCredits: 0.004,
+            config: {},
+          },
+        },
+        {
+          id: "cr_image",
+          type: "imageGen",
+          position: { x: 540, y: 220 },
+          data: {
+            label: "Image Generator",
+            aspectRatio: "16:9",
+            estimatedCredits: 0.006,
+            config: {},
+          },
+        },
+        {
+          id: "cr_out",
+          type: "output",
+          position: { x: 780, y: 220 },
+          data: {
+            label: "Result",
+            outputType: "structured",
+            outputFormat: "summary",
+            config: {},
+          },
+        },
+      ],
+      edges: [
+        { id: "cr_e1", source: "cr_in", target: "cr_prompt", animated: true },
+        { id: "cr_e2", source: "cr_prompt", target: "cr_image", animated: true },
+        { id: "cr_e3", source: "cr_image", target: "cr_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: AGENTIC_TEMPLATE_NAME,
+    category: "Agentic",
+    description:
+      "Agentic Pipeline as nodes — goal → script → 3 keyframes → Veo video → TTS voiceover (same agents as Studio Agentic Pipeline)",
+    tags: ["agentic", "gemini", "veo", "imagen", "studio", "multimodal"],
+    estimatedCreditsPerRun: 0.086,
+    isFeatured: true,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "ag_in",
+          type: "input",
+          position: { x: 40, y: 240 },
+          data: {
+            label: "Launch brief",
+            inputType: "text",
+            value:
+              "Write a cinematic launch script for my fitness app, generate 3 key frame images from the scenes, and narrate the voiceover in a professional tone",
+            config: {},
+          },
+        },
+        {
+          id: "ag_text",
+          type: "agenticText",
+          position: { x: 240, y: 240 },
+          data: { label: "Agentic · Text", estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "ag_image",
+          type: "agenticImage",
+          position: { x: 440, y: 240 },
+          data: { label: "Agentic · Image", imageCount: 3, estimatedCredits: 0.018, config: {} },
+        },
+        {
+          id: "ag_video",
+          type: "agenticVideo",
+          position: { x: 640, y: 240 },
+          data: { label: "Agentic · Video", estimatedCredits: 0.05, config: {} },
+        },
+        {
+          id: "ag_audio",
+          type: "agenticAudio",
+          position: { x: 840, y: 240 },
+          data: { label: "Agentic · Audio", estimatedCredits: 0.01, config: {} },
+        },
+        {
+          id: "ag_out",
+          type: "output",
+          position: { x: 1040, y: 240 },
+          data: {
+            label: "Result",
+            outputType: "structured",
+            outputFormat: "summary",
+            config: {},
+          },
+        },
+      ],
+      edges: [
+        { id: "ag_e1", source: "ag_in", target: "ag_text", animated: true },
+        { id: "ag_e2", source: "ag_text", target: "ag_image", animated: true },
+        { id: "ag_e3", source: "ag_image", target: "ag_video", animated: true },
+        { id: "ag_e4", source: "ag_video", target: "ag_audio", animated: true },
+        { id: "ag_e5", source: "ag_audio", target: "ag_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Agentic: Wildlife Cinematic Clip",
+    category: "Agentic",
+    description:
+      "Short nature brief → script → 3 keyframes → Veo motion clip. Great for “bird flying”, landscapes, product B-roll.",
+    tags: ["agentic", "video", "nature", "veo", "keyframes"],
+    estimatedCreditsPerRun: 0.076,
+    isFeatured: true,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "wc_in",
+          type: "input",
+          position: { x: 40, y: 200 },
+          data: {
+            label: "Scene brief",
+            inputType: "text",
+            value: "A majestic eagle soaring over misty mountains at golden hour, cinematic slow motion",
+            config: {},
+          },
+        },
+        {
+          id: "wc_text",
+          type: "agenticText",
+          position: { x: 260, y: 200 },
+          data: { label: "Agentic · Text", estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "wc_image",
+          type: "agenticImage",
+          position: { x: 480, y: 200 },
+          data: { label: "Agentic · Image", imageCount: 3, estimatedCredits: 0.018, config: {} },
+        },
+        {
+          id: "wc_video",
+          type: "agenticVideo",
+          position: { x: 700, y: 200 },
+          data: { label: "Agentic · Video", estimatedCredits: 0.05, config: {} },
+        },
+        {
+          id: "wc_out",
+          type: "output",
+          position: { x: 920, y: 200 },
+          data: { label: "Clip package", outputType: "structured", outputFormat: "summary", config: {} },
+        },
+      ],
+      edges: [
+        { id: "wc_e1", source: "wc_in", target: "wc_text", animated: true },
+        { id: "wc_e2", source: "wc_text", target: "wc_image", animated: true },
+        { id: "wc_e3", source: "wc_image", target: "wc_video", animated: true },
+        { id: "wc_e4", source: "wc_video", target: "wc_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Agentic: Podcast Voiceover",
+    category: "Agentic",
+    description: "Write a spoken script from your topic, then generate Gemini TTS narration — no video required.",
+    tags: ["agentic", "audio", "podcast", "tts"],
+    estimatedCreditsPerRun: 0.02,
+    isFeatured: true,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "pv_in",
+          type: "input",
+          position: { x: 60, y: 220 },
+          data: {
+            label: "Episode topic",
+            inputType: "text",
+            value: "Explain why consistent habits beat motivation for fitness beginners — 90 second intro",
+            config: {},
+          },
+        },
+        {
+          id: "pv_text",
+          type: "agenticText",
+          position: { x: 320, y: 220 },
+          data: { label: "Agentic · Text", estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "pv_audio",
+          type: "agenticAudio",
+          position: { x: 580, y: 220 },
+          data: { label: "Agentic · Audio", estimatedCredits: 0.01, config: {} },
+        },
+        {
+          id: "pv_out",
+          type: "output",
+          position: { x: 820, y: 220 },
+          data: { label: "Script + audio", outputType: "structured", outputFormat: "summary", config: {} },
+        },
+      ],
+      edges: [
+        { id: "pv_e1", source: "pv_in", target: "pv_text", animated: true },
+        { id: "pv_e2", source: "pv_text", target: "pv_audio", animated: true },
+        { id: "pv_e3", source: "pv_audio", target: "pv_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Agentic: Keyframes Only (Fast)",
+    category: "Agentic",
+    description: "Script + 3 still keyframes in ~3–5 min — skip Veo video when you only need boards or mood frames.",
+    tags: ["agentic", "image", "fast", "storyboard"],
+    estimatedCreditsPerRun: 0.028,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "kf_in",
+          type: "input",
+          position: { x: 80, y: 240 },
+          data: {
+            label: "Creative brief",
+            inputType: "text",
+            value: "A futuristic electric scooter in neon Tokyo rain, cyberpunk product launch",
+            config: {},
+          },
+        },
+        {
+          id: "kf_text",
+          type: "agenticText",
+          position: { x: 340, y: 240 },
+          data: { label: "Agentic · Text", estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "kf_image",
+          type: "agenticImage",
+          position: { x: 600, y: 240 },
+          data: { label: "Agentic · Image", imageCount: 3, estimatedCredits: 0.018, config: {} },
+        },
+        {
+          id: "kf_out",
+          type: "output",
+          position: { x: 860, y: 240 },
+          data: { label: "Storyboard", outputType: "structured", outputFormat: "summary", config: {} },
+        },
+      ],
+      edges: [
+        { id: "kf_e1", source: "kf_in", target: "kf_text", animated: true },
+        { id: "kf_e2", source: "kf_text", target: "kf_image", animated: true },
+        { id: "kf_e3", source: "kf_image", target: "kf_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Social: Thumbnail + Caption",
+    category: "Creative",
+    description:
+      "YouTube-style pack — Gemini prompt → 16:9 thumbnail image → Groq writes title + description + hashtags.",
+    tags: ["youtube", "thumbnail", "social", "creative"],
+    estimatedCreditsPerRun: 0.014,
+    isFeatured: true,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "soc_in",
+          type: "input",
+          position: { x: 40, y: 200 },
+          data: {
+            label: "Video topic",
+            inputType: "text",
+            value: "How I built a pay-per-use AI API on Algorand in 30 days",
+            config: {},
+          },
+        },
+        {
+          id: "soc_prompt",
+          type: "promptGen",
+          position: { x: 260, y: 200 },
+          data: {
+            label: "Thumbnail prompt",
+            category: "Video / YouTube",
+            mode: "advanced",
+            extraInstructions: "High contrast, bold text hook, expressive face if relevant, 16:9",
+            estimatedCredits: 0.004,
+            config: {},
+          },
+        },
+        {
+          id: "soc_image",
+          type: "imageGen",
+          position: { x: 480, y: 200 },
+          data: { label: "Thumbnail image", aspectRatio: "16:9", estimatedCredits: 0.006, config: {} },
+        },
+        {
+          id: "soc_caption",
+          type: "ai",
+          position: { x: 700, y: 200 },
+          data: {
+            label: "Title & caption",
+            model: "llama-3.3-70b-versatile",
+            systemPrompt:
+              "From the topic and thumbnail context, write: 3 click-worthy titles, a 2-paragraph video description, and 12 hashtags. Use markdown sections.",
+            outputFormat: "summary",
+            maxTokens: 1024,
+            estimatedCredits: 0.004,
+            config: {},
+          },
+        },
+        {
+          id: "soc_out",
+          type: "output",
+          position: { x: 920, y: 200 },
+          data: { label: "Social pack", outputType: "structured", outputFormat: "summary", config: {} },
+        },
+      ],
+      edges: [
+        { id: "soc_e1", source: "soc_in", target: "soc_prompt", animated: true },
+        { id: "soc_e2", source: "soc_prompt", target: "soc_image", animated: true },
+        { id: "soc_e3", source: "soc_image", target: "soc_caption", animated: true },
+        { id: "soc_e4", source: "soc_caption", target: "soc_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Research → Executive Report",
+    category: "Research",
+    description: "Two-pass Groq pipeline — gather facts, then produce an executive report with action items.",
+    tags: ["research", "report", "groq"],
+    estimatedCreditsPerRun: 0.012,
+    isFeatured: true,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "res_in",
+          type: "input",
+          position: { x: 60, y: 220 },
+          data: {
+            label: "Research question",
+            inputType: "text",
+            value: "State of micro-payments for AI APIs in 2026 — market size, players, risks",
+            config: {},
+          },
+        },
+        {
+          id: "res_gather",
+          type: "ai",
+          position: { x: 300, y: 220 },
+          data: {
+            label: "Fact gathering",
+            model: "llama-3.3-70b-versatile",
+            systemPrompt:
+              "Research this question thoroughly. Output: key statistics, 6 bullet facts, competitor list, open questions. Be specific; cite plausible public sources by name.",
+            outputFormat: "summary",
+            maxTokens: 1536,
+            temperature: 0.5,
+            estimatedCredits: 0.006,
+            config: {},
+          },
+        },
+        {
+          id: "res_report",
+          type: "ai",
+          position: { x: 540, y: 220 },
+          data: {
+            label: "Executive report",
+            model: "llama-3.3-70b-versatile",
+            systemPrompt:
+              "Turn the research notes into an executive report: Overview, Market landscape, Opportunities, Risks, 5 action items. Professional tone.",
+            outputFormat: "report",
+            maxTokens: 2048,
+            temperature: 0.4,
+            estimatedCredits: 0.006,
+            config: {},
+          },
+        },
+        {
+          id: "res_out",
+          type: "output",
+          position: { x: 780, y: 220 },
+          data: { label: "Final report", outputType: "structured", outputFormat: "report", config: {} },
+        },
+      ],
+      edges: [
+        { id: "res_e1", source: "res_in", target: "res_gather", animated: true },
+        { id: "res_e2", source: "res_gather", target: "res_report", animated: true },
+        { id: "res_e3", source: "res_report", target: "res_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "YouTube → Short-form Script + Frame",
+    category: "Media",
+    description: "Pull a YouTube URL, summarize it, write a 30s vertical script, generate one hero keyframe.",
+    tags: ["youtube", "shorts", "agentic", "repurpose"],
+    estimatedCreditsPerRun: 0.022,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "ys_in",
+          type: "input",
+          position: { x: 40, y: 240 },
+          data: { label: "YouTube URL", inputType: "youtube", value: "", config: {} },
+        },
+        {
+          id: "ys_ai",
+          type: "ai",
+          position: { x: 260, y: 240 },
+          data: {
+            label: "Summarize video",
+            model: "llama-3.3-70b-versatile",
+            systemPrompt:
+              "From the transcript, extract: hook, 3 key beats, CTA. Format for a 30-second vertical short.",
+            outputFormat: "summary",
+            maxTokens: 1024,
+            estimatedCredits: 0.005,
+            config: {},
+          },
+        },
+        {
+          id: "ys_text",
+          type: "agenticText",
+          position: { x: 480, y: 240 },
+          data: { label: "Short script", estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "ys_image",
+          type: "agenticImage",
+          position: { x: 700, y: 240 },
+          data: { label: "Hero frame", imageCount: 1, estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "ys_out",
+          type: "output",
+          position: { x: 920, y: 240 },
+          data: { label: "Short pack", outputType: "structured", outputFormat: "summary", config: {} },
+        },
+      ],
+      edges: [
+        { id: "ys_e1", source: "ys_in", target: "ys_ai", animated: true },
+        { id: "ys_e2", source: "ys_ai", target: "ys_text", animated: true },
+        { id: "ys_e3", source: "ys_text", target: "ys_image", animated: true },
+        { id: "ys_e4", source: "ys_image", target: "ys_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Data Task → Python (Sandbox)",
+    category: "Code",
+    description: "Describe a data task; Gemma writes and runs Python in a sandbox, returns stdout.",
+    tags: ["code", "python", "agentic", "automation"],
+    estimatedCreditsPerRun: 0.008,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "py_in",
+          type: "input",
+          position: { x: 100, y: 200 },
+          data: {
+            label: "Task",
+            inputType: "text",
+            value: "Given sales 120, 150, 98, 200, compute average, max, and percent change from first to last",
+            config: {},
+          },
+        },
+        {
+          id: "py_code",
+          type: "agenticCode",
+          position: { x: 420, y: 200 },
+          data: { label: "Agentic · Code", estimatedCredits: 0.006, config: {} },
+        },
+        {
+          id: "py_out",
+          type: "output",
+          position: { x: 720, y: 200 },
+          data: { label: "Run result", outputType: "structured", outputFormat: "json", config: {} },
+        },
+      ],
+      edges: [
+        { id: "py_e1", source: "py_in", target: "py_code", animated: true },
+        { id: "py_e2", source: "py_code", target: "py_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Blog Outline → SEO Post",
+    category: "Writing",
+    description: "Gemini outlines from a keyword, Groq expands to full SEO article sections, saves via Blog Agent.",
+    tags: ["blog", "seo", "writing", "gemini", "groq"],
+    estimatedCreditsPerRun: 0.02,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "seo_in",
+          type: "input",
+          position: { x: 40, y: 220 },
+          data: {
+            label: "Target keyword",
+            inputType: "text",
+            value: "pay per use AI API blockchain micropayments",
+            config: {},
+          },
+        },
+        {
+          id: "seo_text",
+          type: "agenticText",
+          position: { x: 280, y: 220 },
+          data: {
+            label: "Outline (Gemini)",
+            estimatedCredits: 0.008,
+            goal: "Create a detailed SEO blog outline with H2s, meta description, and 5 target keywords",
+            config: {},
+          },
+        },
+        {
+          id: "seo_expand",
+          type: "ai",
+          position: { x: 520, y: 220 },
+          data: {
+            label: "Expand article",
+            model: "llama-3.3-70b-versatile",
+            systemPrompt:
+              "Expand the outline into a complete 1200-word SEO blog post with introduction, H2 sections, conclusion, and FAQ. Markdown.",
+            outputFormat: "plain",
+            maxTokens: 3072,
+            temperature: 0.6,
+            estimatedCredits: 0.008,
+            config: {},
+          },
+        },
+        {
+          id: "seo_blog",
+          type: "blog",
+          position: { x: 760, y: 220 },
+          data: {
+            label: "Save to Studio",
+            tone: "professional",
+            wordCount: 1200,
+            publishMode: "studio",
+            platforms: [],
+            config: {},
+          },
+        },
+      ],
+      edges: [
+        { id: "seo_e1", source: "seo_in", target: "seo_text", animated: true },
+        { id: "seo_e2", source: "seo_text", target: "seo_expand", animated: true },
+        { id: "seo_e3", source: "seo_expand", target: "seo_blog", animated: true },
+      ],
+    },
+  },
 ];
 
 async function ensureTemplates() {
   const count = await AgentTemplate.countDocuments();
   if (count === 0) {
     await AgentTemplate.insertMany(DEFAULT_TEMPLATES);
+    return;
+  }
+  for (const tpl of DEFAULT_TEMPLATES) {
+    const exists = await AgentTemplate.findOne({ name: tpl.name });
+    if (!exists) {
+      await AgentTemplate.create(tpl);
+      templateCache.at = 0;
+    }
   }
 }
 

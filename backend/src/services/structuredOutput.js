@@ -27,6 +27,71 @@ export function getStructuredSystemSuffix(format) {
   return `\n\n---\nOutput format requirement:\n${FORMAT_PROMPTS[key]}`;
 }
 
+function stripHeavyMedia(obj) {
+  if (!obj || typeof obj !== "object") return obj;
+  const next = { ...obj };
+  if (next.audio?.dataUrl) {
+    next.audio = {
+      mimeType: next.audio.mimeType || "audio/wav",
+      url: next.audio.url || null,
+      hasAudio: true,
+    };
+  }
+  if (Array.isArray(next.images)) {
+    next.images = next.images.map((img) =>
+      img?.url ? { url: img.url } : { placeholder: true }
+    );
+  }
+  if (typeof next.content === "string" && next.content.length > 12_000) {
+    next.content = `${next.content.slice(0, 12_000)}…`;
+  }
+  delete next.meta;
+  return next;
+}
+
+/** Shrink structured run payload before MongoDB save (no inline base64). */
+export function compactStructuredResult(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+
+  const final = payload.final ? { ...payload.final } : null;
+  if (final?.agentic) final.agentic = stripHeavyMedia(final.agentic);
+  if (final?.audio?.dataUrl) {
+    final.audio = { mimeType: final.audio.mimeType, url: final.audio.url || null };
+  }
+  if (final?.image?.dataUrl && !final.image?.url) {
+    final.image = { mimeType: final.image.mimeType, url: final.image.url || null };
+  }
+  if (typeof final?.text === "string" && final.text.length > 16_000) {
+    final.text = `${final.text.slice(0, 16_000)}…`;
+  }
+
+  const steps = (payload.steps || []).map((step) => {
+    const s = { ...step };
+    if (s.structured?.agentic) {
+      s.structured = {
+        ...s.structured,
+        agentic: stripHeavyMedia(s.structured.agentic),
+      };
+    }
+    if (s.structured?.audio?.dataUrl) {
+      s.structured.audio = { mimeType: s.structured.audio.mimeType, url: s.structured.audio.url };
+    }
+    if (typeof s.text === "string" && s.text.length > 8000) {
+      s.text = `${s.text.slice(0, 8000)}…`;
+    }
+    return s;
+  });
+
+  return {
+    workflowName: payload.workflowName,
+    format: payload.format,
+    generatedAt: payload.generatedAt,
+    final,
+    steps,
+    stats: payload.stats,
+  };
+}
+
 export function tryParseJson(text) {
   const raw = String(text || "").trim();
   if (!raw) return null;
@@ -43,13 +108,30 @@ export function tryParseJson(text) {
 /**
  * Build final structured payload for output nodes and run summary.
  */
-export function buildStructuredRunResult({ workflowName, nodeResults, nodeMap, outputFormat }) {
+export function buildStructuredRunResult({
+  workflowName,
+  nodeResults,
+  nodeMap,
+  outputFormat,
+  payloadByNodeId = {},
+}) {
   const steps = (nodeResults || [])
     .filter((r) => r.status === "completed" || r.status === "success")
     .map((r) => {
       const node = nodeMap?.[r.nodeId];
       const parsed = tryParseJson(r.output);
       const blogParsed = parsed?.blogPostId ? parsed : null;
+      const creativeParsed =
+        parsed?.kind === "imageGen" || parsed?.kind === "promptGen" ? parsed : null;
+      let agenticParsed =
+        typeof parsed?.kind === "string" && parsed.kind.startsWith("agentic") ? parsed : null;
+      const livePayload = payloadByNodeId[r.nodeId];
+      if (agenticParsed && livePayload) {
+        agenticParsed = { ...agenticParsed, ...livePayload };
+        if (livePayload.audio?.url) agenticParsed.audio = livePayload.audio;
+        if (livePayload.images?.length) agenticParsed.images = livePayload.images;
+        if (livePayload.videoUri) agenticParsed.videoUri = livePayload.videoUri;
+      }
       return {
         nodeId: r.nodeId,
         label: node?.data?.label || r.nodeId,
@@ -59,6 +141,42 @@ export function buildStructuredRunResult({ workflowName, nodeResults, nodeMap, o
         creditsDeducted: r.creditsDeducted ?? 0,
         ...(blogParsed
           ? { structured: { blog: blogParsed, title: blogParsed.title, summary: `Blog created (${blogParsed.status})` }, text: null }
+          : agenticParsed
+            ? {
+                structured: {
+                  title: agenticParsed.kind.replace("agentic", "Agentic "),
+                  summary: agenticParsed.displayPreview || agenticParsed.agent,
+                  agentic: stripHeavyMedia(agenticParsed),
+                  images: (agenticParsed.images || []).filter((img) => img?.url?.startsWith("http")),
+                  audio: agenticParsed.audio?.url?.startsWith("http") ? agenticParsed.audio : null,
+                  videoUri: agenticParsed.videoUri,
+                  text:
+                    agenticParsed.agent === "text" && typeof agenticParsed.content === "string"
+                      ? agenticParsed.content
+                      : undefined,
+                },
+                text: null,
+              }
+          : creativeParsed?.kind === "imageGen"
+            ? {
+                structured: {
+                  title: "Generated image",
+                  summary: creativeParsed.imageWarning || "Image ready",
+                  image: creativeParsed.image,
+                  imagePrompt: creativeParsed.imagePrompt,
+                  prompt: creativeParsed.prompt,
+                },
+                text: null,
+              }
+          : creativeParsed?.kind === "promptGen"
+            ? {
+                structured: {
+                  title: "Generated prompt",
+                  summary: String(creativeParsed.prompt || "").slice(0, 400),
+                  prompt: creativeParsed.prompt,
+                },
+                text: null,
+              }
           : parsed
             ? { structured: parsed, text: null }
             : { text: r.output || "" }),
@@ -68,7 +186,21 @@ export function buildStructuredRunResult({ workflowName, nodeResults, nodeMap, o
   const blogNode = (nodeResults || []).find((r) => nodeMap?.[r.nodeId]?.type === "blog");
   const outputNode = (nodeResults || []).find((r) => nodeMap?.[r.nodeId]?.type === "output");
   const aiNodes = steps.filter((s) => s.type === "ai");
-  const finalStep = blogNode
+  const imageNode = (nodeResults || []).find((r) => nodeMap?.[r.nodeId]?.type === "imageGen");
+  const agenticPriority = ["agenticVideo", "agenticAudio", "agenticImage", "agenticText"];
+  let agenticNode = null;
+  for (const t of agenticPriority) {
+    const found = (nodeResults || []).find((r) => nodeMap?.[r.nodeId]?.type === t);
+    if (found) {
+      agenticNode = found;
+      break;
+    }
+  }
+  const finalStep = agenticNode
+    ? steps.find((s) => s.nodeId === agenticNode.nodeId)
+    : imageNode
+    ? steps.find((s) => s.nodeId === imageNode.nodeId)
+    : blogNode
     ? steps.find((s) => s.nodeId === blogNode.nodeId)
     : outputNode
       ? steps.find((s) => s.nodeId === outputNode.nodeId)

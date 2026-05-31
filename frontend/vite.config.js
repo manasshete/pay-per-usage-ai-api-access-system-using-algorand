@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 import tailwindcss from "tailwindcss";
@@ -9,6 +9,9 @@ const nm = (pkg) => `node_modules/${pkg}`;
 /** Split heavy node_modules; avoid circular deps (react/polyfills must not pull vendor). */
 function manualChunks(id) {
   if (!id.includes("node_modules")) return;
+
+  // Keep with the lazy Studio Analytics route (avoids broken split + smaller initial vendor).
+  if (id.includes(nm("recharts")) || id.includes("/d3-") || id.includes("/d3/")) return;
 
   if (id.includes(nm("algosdk"))) return "algosdk";
   if (id.includes(nm("@perawallet"))) return "pera";
@@ -28,7 +31,7 @@ function manualChunks(id) {
 
   if (id.includes(nm("@xyflow")) || id.includes(nm("@reactflow")) || id.includes(nm("elkjs"))) return "xyflow";
   if (id.includes(nm("@tiptap")) || id.includes("prosemirror")) return "tiptap";
-  if (id.includes(nm("recharts")) || id.includes(nm("d3-"))) return "recharts";
+  // Do not split recharts/d3 — isolated chunks break lodash `_` interop (_ is not a function).
   if (id.includes(nm("framer-motion"))) return "motion";
   if (id.includes(nm("react-router"))) return "router";
   if (id.includes(nm("react-dom")) || id.includes(nm("react/")) || id.includes(nm("scheduler"))) return "react";
@@ -37,52 +40,62 @@ function manualChunks(id) {
   return "vendor";
 }
 
-export default defineConfig({
-  css: {
-    postcss: {
-      plugins: [tailwindcss(), autoprefixer()],
-    },
-  },
-  build: {
-    chunkSizeWarningLimit: 1100,
-    rollupOptions: {
-      output: {
-        manualChunks,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  const proxyTarget = env.VITE_PROXY_TARGET?.trim() || "http://localhost:5001";
+
+  return {
+    css: {
+      postcss: {
+        plugins: [tailwindcss(), autoprefixer()],
       },
     },
-  },
-  plugins: [
-    react(),
-    nodePolyfills({
-      globals: {
-        Buffer: true,
-        global: true,
-        process: true,
-      },
-      protocolImports: true,
-    }),
-  ],
-  define: {
-    global: "globalThis",
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: "globalThis",
+    build: {
+      chunkSizeWarningLimit: 1100,
+      rollupOptions: {
+        output: {
+          manualChunks,
+        },
       },
     },
-  },
-  server: {
-    port: 5173,
-    proxy: {
-      "/api": {
-        target: "http://localhost:5001",
-        changeOrigin: true,
+    plugins: [
+      react(),
+      nodePolyfills({
+        globals: {
+          Buffer: true,
+          global: true,
+          process: true,
+        },
+        protocolImports: true,
+      }),
+    ],
+    define: {
+      global: "globalThis",
+    },
+    optimizeDeps: {
+      include: ["recharts"],
+      esbuildOptions: {
+        define: {
+          global: "globalThis",
+        },
       },
       "/x402-test": {
         target: "http://localhost:5001",
         changeOrigin: true,
       },
     },
-  },
+    server: {
+      port: 5173,
+      proxy: {
+        "/api": {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
+        "/outputs": {
+          target: proxyTarget,
+          changeOrigin: true,
+        },
+      },
+    },
+  };
 });

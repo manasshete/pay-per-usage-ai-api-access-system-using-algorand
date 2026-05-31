@@ -6,9 +6,14 @@ import { enrichInputValue, isYoutubeUrl } from "./urlEnrichment.js";
 import {
   getStructuredSystemSuffix,
   buildStructuredRunResult,
+  compactStructuredResult,
   formatStructuredForDisplay,
 } from "./structuredOutput.js";
 import { publishWorkflowToBlog } from "./workflowBlogService.js";
+import { executePromptGenNode, executeImageGenNode } from "./workflowCreativeNodes.js";
+import { AGENTIC_NODE_TYPES, formatAgenticNodeOutput } from "./workflowAgenticNodes.js";
+import { publishAgenticAssets, publishCreativeImage } from "./gcsAssetService.js";
+import { formatCreativeNodeOutput } from "./workflowCreativeNodes.js";
 
 function rawFromContext(text) {
   const m = String(text || "").match(/URL:\s*(https?:\/\/[^\s]+)/i);
@@ -19,6 +24,50 @@ function logLine(run, msg) {
   const line = `[${new Date().toISOString().slice(11, 19)}] ${msg}`;
   run.logs.push(line);
   emitRunEvent(run._id, { type: "log", line });
+}
+
+/** Avoid MongoDB 16MB limit / multi-minute saves after image+audio nodes. */
+function compactOutputForStorage(output, nodeType) {
+  const raw = String(output || "");
+  if (!raw) return "";
+  try {
+    const p = JSON.parse(raw);
+    if (p?.kind === "imageGen" && p.image?.dataUrl && !p.image?.url?.startsWith("http")) {
+      p.image = { mimeType: p.image.mimeType, dataUrl: "[inline-image]" };
+      return JSON.stringify(p);
+    }
+    if (typeof p?.kind === "string" && p.kind.startsWith("agentic")) {
+      const hasGcsImages =
+        Array.isArray(p.images) && p.images.every((img) => img?.url?.startsWith("http"));
+      const hasGcsAudio = p.audio?.url?.startsWith("http");
+      if (!hasGcsImages && Array.isArray(p.images)) {
+        p.images = p.images.map((_, i) => ({ dataUrl: `[image_${i}]` }));
+      }
+      if (!hasGcsAudio && p.audio?.dataUrl) {
+        p.audio = { mimeType: p.audio.mimeType || "audio/wav", dataUrl: "[inline-audio]" };
+      }
+      if (typeof p.content === "string" && p.content.length > 8000) {
+        p.content = `${p.content.slice(0, 8000)}…`;
+      }
+      return JSON.stringify(p);
+    }
+    if (p?.final || p?.steps) {
+      return JSON.stringify(compactStructuredResult(p));
+    }
+  } catch {
+    /* plain text */
+  }
+  if (raw.length > 100_000) return `${raw.slice(0, 100_000)}…[truncated]`;
+  return raw;
+}
+
+async function persistRun(run, label) {
+  try {
+    await run.save();
+  } catch (err) {
+    logLine(run, `Save failed${label ? ` (${label})` : ""}: ${err.message}`);
+    throw err;
+  }
 }
 
 export function validateDAG(nodes, edges) {
@@ -138,6 +187,73 @@ async function executeNode(node, context, run, meta = {}) {
       completedAt: new Date(),
     };
   }
+  if (node.type === "promptGen") {
+    const result = await executePromptGenNode(node, upstream);
+    if (run) logLine(run, `Prompt Generator completed (${result.creativePayload?.prompt?.length || 0} chars)`);
+    return {
+      output: result.output,
+      displayOutput: result.creativePayload?.prompt || result.output,
+      creativePayload: result.creativePayload,
+      tokensUsed: result.tokensUsed,
+      creditsDeducted: result.creditsDeducted,
+      startedAt,
+      completedAt: new Date(),
+    };
+  }
+  if (AGENTIC_NODE_TYPES[node.type]) {
+    const result = await AGENTIC_NODE_TYPES[node.type](node, upstream);
+    if (result.agenticPayload && meta.run?._id) {
+      await publishAgenticAssets(result.agenticPayload, {
+        scope: "workflow",
+        runId: meta.run._id.toString(),
+        nodeId: node.id,
+      });
+      result.output = formatAgenticNodeOutput(result.agenticPayload);
+      result.displayOutput =
+        result.agenticPayload.displayPreview || result.displayOutput;
+    }
+    const agentLabel = node.data?.label || node.type;
+    if (run) logLine(run, `${agentLabel}: ${result.displayOutput?.slice(0, 80) || "done"}`);
+    return {
+      output: result.output,
+      displayOutput: result.displayOutput || result.output,
+      agenticPayload: result.agenticPayload,
+      tokensUsed: result.tokensUsed,
+      creditsDeducted: result.creditsDeducted,
+      startedAt,
+      completedAt: new Date(),
+    };
+  }
+  if (node.type === "imageGen") {
+    const result = await executeImageGenNode(node, upstream);
+    if (result.creativePayload && meta.run?._id) {
+      await publishCreativeImage(result.creativePayload, {
+        runId: meta.run._id.toString(),
+        label: node.id,
+      });
+      result.output = formatCreativeNodeOutput(result.creativePayload);
+      result.displayOutput = result.creativePayload.imageUrl
+        ? "Image uploaded to GCS"
+        : result.displayOutput;
+    }
+    if (run) {
+      logLine(
+        run,
+        result.creativePayload?.image
+          ? "Image Generator completed"
+          : `Image Generator warning: ${result.creativePayload?.imageWarning || "no image"}`
+      );
+    }
+    return {
+      output: result.output,
+      displayOutput: result.displayOutput || result.output,
+      creativePayload: result.creativePayload,
+      tokensUsed: result.tokensUsed,
+      creditsDeducted: result.creditsDeducted,
+      startedAt,
+      completedAt: new Date(),
+    };
+  }
   if (node.type === "blog") {
     if (!userId) throw new Error("User context required for blog publish");
     const blogResult = await publishWorkflowToBlog({
@@ -167,19 +283,27 @@ async function executeNode(node, context, run, meta = {}) {
     };
   }
   if (node.type === "output") {
+    const payloadByNodeId = Object.fromEntries(
+      (completedResults || [])
+        .filter((r) => r.agenticPayload)
+        .map((r) => [r.nodeId, r.agenticPayload])
+    );
     const nodeResultsForStruct = (completedResults || []).map((r) => ({
       nodeId: r.nodeId,
       status: "completed",
-      output: r.output,
+      output: compactOutputForStorage(r.output, nodeMap?.[r.nodeId]?.type),
       tokensUsed: r.tokensUsed ?? 0,
       creditsDeducted: r.creditsDeducted ?? 0,
     }));
-    const payload = buildStructuredRunResult({
-      workflowName,
-      nodeResults: nodeResultsForStruct,
-      nodeMap,
-      outputFormat: node.data?.outputFormat || "summary",
-    });
+    const payload = compactStructuredResult(
+      buildStructuredRunResult({
+        workflowName,
+        nodeResults: nodeResultsForStruct,
+        nodeMap,
+        outputFormat: node.data?.outputFormat || "summary",
+        payloadByNodeId,
+      })
+    );
     return {
       output: formatStructuredForDisplay(payload),
       structuredPayload: payload,
@@ -214,7 +338,7 @@ export async function executeWorkflow(workflowId, runId, userId) {
     creditsDeducted: 0,
     error: null,
   }));
-  await run.save();
+  await persistRun(run, "start");
   logLine(run, "Workflow execution started");
 
   const completedResults = [];
@@ -226,7 +350,7 @@ export async function executeWorkflow(workflowId, runId, userId) {
       const idx = run.nodeResults.findIndex((r) => r.nodeId === nodeId);
       run.nodeResults[idx].status = "running";
       run.nodeResults[idx].startedAt = new Date();
-      await run.save();
+      await persistRun(run, nodeId);
       emitRunEvent(run._id, {
         nodeId,
         status: "running",
@@ -241,31 +365,42 @@ export async function executeWorkflow(workflowId, runId, userId) {
           completedResults,
           workflowName: workflow.name,
           userId,
+          run,
         });
         run.nodeResults[idx].status = "completed";
-        run.nodeResults[idx].output = result.output;
+        run.nodeResults[idx].output = compactOutputForStorage(result.output, node.type);
         run.nodeResults[idx].tokensUsed = result.tokensUsed;
         run.nodeResults[idx].creditsDeducted = result.creditsDeducted;
         run.nodeResults[idx].completedAt = result.completedAt;
         run.nodeResults[idx].error = null;
         run.totalTokensUsed += result.tokensUsed;
         run.totalCreditsDeducted += result.creditsDeducted;
-        completedResults.push({ nodeId, output: result.output, ...result });
+        completedResults.push({
+          nodeId,
+          output: result.output,
+          agenticPayload: result.agenticPayload,
+          structuredPayload: result.structuredPayload,
+          displayOutput: result.displayOutput,
+          tokensUsed: result.tokensUsed,
+          creditsDeducted: result.creditsDeducted,
+        });
         logLine(run, `${nodeId} completed`);
         emitRunEvent(run._id, {
           type: "node",
           nodeId,
           status: "success",
-          output: String(result.output || "").slice(0, 500),
+          nodeType: node.type,
+          output: String(result.displayOutput || result.output || "").slice(0, 500),
           tokensUsed: result.tokensUsed,
           creditsDeducted: result.creditsDeducted,
         });
+        await persistRun(run, nodeId);
       } catch (nodeErr) {
         run.nodeResults[idx].status = "error";
         run.nodeResults[idx].error = nodeErr.message;
         run.nodeResults[idx].completedAt = new Date();
         run.status = "failed";
-        await run.save();
+        await persistRun(run, nodeId);
         logLine(run, `${nodeId} failed: ${nodeErr.message}`);
         emitRunEvent(run._id, {
           type: "node",
@@ -283,28 +418,72 @@ export async function executeWorkflow(workflowId, runId, userId) {
         closeRunStream(run._id);
         return run;
       }
-      await run.save();
     }
 
     run.status = "completed";
     run.completedAt = new Date();
     run.runtimeMs = Date.now() - started;
-    run.structuredResult = buildStructuredRunResult({
-      workflowName: workflow.name,
-      nodeResults: run.nodeResults,
-      nodeMap,
-      outputFormat:
-        Object.values(nodeMap).find((n) => n.type === "output")?.data?.outputFormat || "summary",
-    });
-    await run.save();
-    logLine(run, "Workflow completed");
+
+    const outputNode = Object.values(nodeMap).find((n) => n.type === "output");
+    const payloadByNodeId = Object.fromEntries(
+      completedResults.filter((r) => r.agenticPayload).map((r) => [r.nodeId, r.agenticPayload])
+    );
+    const outputStep = completedResults.find((r) => nodeMap[r.nodeId]?.type === "output");
+
+    if (outputStep?.structuredPayload) {
+      run.structuredResult = outputStep.structuredPayload;
+    } else {
+      const structInputs = run.nodeResults.map((r) => ({
+        nodeId: r.nodeId,
+        status: "completed",
+        output: r.output,
+        tokensUsed: r.tokensUsed ?? 0,
+        creditsDeducted: r.creditsDeducted ?? 0,
+      }));
+      run.structuredResult = compactStructuredResult(
+        buildStructuredRunResult({
+          workflowName: workflow.name,
+          nodeResults: structInputs,
+          nodeMap,
+          outputFormat: outputNode?.data?.outputFormat || "summary",
+          payloadByNodeId,
+        })
+      );
+    }
+
+    let saveOk = true;
+    try {
+      await persistRun(run, "complete");
+    } catch (saveErr) {
+      saveOk = false;
+      logLine(run, `Save failed (complete): ${saveErr.message}`);
+      run.structuredResult = compactStructuredResult(run.structuredResult);
+      try {
+        await persistRun(run, "complete-retry");
+      } catch (retryErr) {
+        logLine(run, `Retry save failed: ${retryErr.message}`);
+        try {
+          run.structuredResult = null;
+          await run.save();
+        } catch {
+          /* leave in-memory state for SSE */
+        }
+      }
+    }
+
+    logLine(run, saveOk ? "Workflow completed" : "Workflow completed (results in panel; DB save partial)");
     emitRunEvent(run._id, {
       type: "complete",
       status: "completed",
+      saveWarning: saveOk ? null : "Run finished but database save was trimmed. Results are still shown below.",
       totalCredits: run.totalCreditsDeducted,
       totalTokens: run.totalTokensUsed,
       runtimeMs: run.runtimeMs,
       structuredResult: run.structuredResult,
+      nodeResults: run.nodeResults.map((r) => ({
+        nodeId: r.nodeId,
+        status: r.status === "completed" ? "completed" : r.status,
+      })),
     });
     closeRunStream(run._id);
     return run;
