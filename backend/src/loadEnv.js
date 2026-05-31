@@ -78,8 +78,7 @@ if (!platformMn) {
   console.warn("[env] PLATFORM_MNEMONIC: not set (creator withdrawals disabled)");
 } else {
   try {
-    const algosdk = await import("algosdk");
-    const { addr } = algosdk.default.mnemonicToSecretKey(platformMn);
+    const { addr } = algosdk.mnemonicToSecretKey(platformMn);
     console.log("[env] PLATFORM_MNEMONIC: valid treasury", addr.slice(0, 8) + "…");
   } catch {
     console.warn("[env] PLATFORM_MNEMONIC: invalid (must be 25-word Algorand phrase)");
