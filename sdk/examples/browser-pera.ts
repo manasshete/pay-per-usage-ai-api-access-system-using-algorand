@@ -2,7 +2,7 @@
  * Browser + Pera Wallet example (pseudo-code — wire to your app's Pera connect flow).
  *
  * import { PeraWalletConnect } from "@perawallet/connect";
- * import { BYOSigner, SentinelClient } from "@sentinel-ai/sdk";
+ * import { BYOSigner, SentinelClient } from "@sentinalapi/sdk";
  *
  * const pera = new PeraWalletConnect();
  * const accounts = await pera.connect();

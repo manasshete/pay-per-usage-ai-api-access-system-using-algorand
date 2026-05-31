@@ -1,5 +1,5 @@
 {
-  "name": "@sentinel-ai/sdk",
+  "name": "@sentinalapi/sdk",
   "version": "1.0.0",
   "description": "Official JavaScript/TypeScript SDK for the Sentinel pay-per-use AI API marketplace on Algorand",
   "license": "MIT",
@@ -30,10 +30,25 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "prepublishOnly": "npm run build",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc --noEmit"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "author": "Sentinel AI Team <wesentinal@gmail.com>",
+  "homepage": "https://github.com/lathi-aayush/pay-per-usage-ai-api-access-system-using-algorand/tree/main/sdk",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lathi-aayush/pay-per-usage-ai-api-access-system-using-algorand.git",
+    "directory": "sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/lathi-aayush/pay-per-usage-ai-api-access-system-using-algorand/issues",
+    "email": "wesentinal@gmail.com"
   },
   "dependencies": {
     "algosdk": "^3.5.2"
@@ -49,6 +64,11 @@
     "algorand",
     "ai",
     "pay-per-use",
-    "api"
+    "api",
+    "sdk",
+    "blockchain",
+    "llm",
+    "groq",
+    "openai"
   ]
 }

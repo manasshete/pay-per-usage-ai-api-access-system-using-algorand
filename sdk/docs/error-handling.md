@@ -1,4 +1,4 @@
-# Error Handling — @sentinel-ai/sdk
+# Error Handling — @sentinalapi/sdk
 
 The SDK throws typed error subclasses so you can handle specific failure modes cleanly.
 
@@ -23,7 +23,7 @@ import {
   SentinelSessionExpired,
   SentinelUpstreamError,
   SentinelNetworkError,
-} from "@sentinel-ai/sdk";
+} from "@sentinalapi/sdk";
 
 try {
   const response = await client.chat(messages, signer);

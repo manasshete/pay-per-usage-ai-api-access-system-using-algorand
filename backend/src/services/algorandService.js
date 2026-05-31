@@ -37,17 +37,14 @@ export async function lookupTransactionByIDWithRetry(
       return await client.lookupTransactionByID(txId).do();
     } catch (e) {
       lastErr = e;
-      const msg = String(e?.message || "").toLowerCase();
-      const notFound =
-        msg.includes("404") ||
-        msg.includes("not found") ||
-        e?.status === 404 ||
-        e?.response?.status === 404;
-      if (!notFound) throw e;
+      if (!isIndexerNotFound(e)) throw e;
       if (i < tries - 1) await sleep(delayMs);
     }
   }
-  throw lastErr ?? new Error("Transaction not indexed yet");
+  throw new Error(
+    "Transaction not visible on the Algorand indexer yet. " +
+    "The network may be lagging — wait a moment and try submitting your txId again."
+  );
 }
 
 /**
@@ -111,6 +108,27 @@ export function indexerTransactionConfirmedRound(txInfo) {
 }
 
 /**
+ * Returns true when an algosdk Indexer error is a 404 "Not Found".
+ * algosdk v3 surfaces the algonode JSON body as the error message:
+ *   {"message":"Not Found","requestID":"..."}  ← exactly what we intercept here.
+ */
+export function isIndexerNotFound(e) {
+  if (!e) return false;
+  // HTTP status codes surfaced by algosdk
+  if (e?.status === 404 || e?.response?.status === 404) return true;
+  const raw = String(e?.message || e || "");
+  // algonode v3 JSON body format
+  try {
+    const parsed = JSON.parse(raw);
+    const msg = String(parsed?.message || "").toLowerCase();
+    if (msg === "not found" || msg.includes("not found")) return true;
+  } catch { /* not JSON */ }
+  // plain text fallbacks
+  const lower = raw.toLowerCase();
+  return lower.includes("not found") || lower.includes("404");
+}
+
+/**
  * Polls the indexer until the transaction appears with confirmed-round > 0,
  * or exhausts attempts (handles TestNet indexer lag after broadcast).
  */
@@ -124,7 +142,6 @@ export async function lookupConfirmedTransactionOnIndexer(
   }
   const client = getIndexer();
   let attempts = 0;
-  let lastErr;
   while (attempts < maxAttempts) {
     attempts++;
     try {
@@ -132,22 +149,28 @@ export async function lookupConfirmedTransactionOnIndexer(
       if (indexerTransactionConfirmedRound(info)) {
         return info;
       }
-      lastErr = new Error("Transaction not confirmed on indexer yet");
+      // Transaction seen but not confirmed yet
       console.log(
         `[indexer] attempt ${attempts}/${maxAttempts} tx ${id}: no confirmed-round yet`
       );
     } catch (e) {
-      lastErr = e;
+      if (!isIndexerNotFound(e)) {
+        // Unexpected error — rethrow immediately (don't waste retries)
+        throw e;
+      }
       console.log(
-        `[indexer] attempt ${attempts}/${maxAttempts} tx ${id} failed:`,
-        e?.message || e
+        `[indexer] attempt ${attempts}/${maxAttempts} tx ${id}: not found yet (indexer lag)`
       );
     }
     if (attempts < maxAttempts) {
       await sleep(delayMs);
     }
   }
-  throw lastErr ?? new Error("Transaction not found or not confirmed on indexer");
+  throw new Error(
+    "Payment not visible on the Algorand indexer after multiple attempts. " +
+    "The TestNet indexer can lag 20–30s behind the node. " +
+    "Wait a moment and resubmit your transaction ID."
+  );
 }
 
 /** Native ALGO balance (microalgos) for an account from the indexer. */

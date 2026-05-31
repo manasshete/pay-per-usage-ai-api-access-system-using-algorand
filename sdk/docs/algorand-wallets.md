@@ -1,4 +1,4 @@
-# Algorand Wallet Guides — @sentinel-ai/sdk
+# Algorand Wallet Guides — @sentinalapi/sdk
 
 The SDK abstracts wallet signing via the `Signer` interface. Here's how to plug in each wallet.
 
@@ -14,7 +14,7 @@ npm install @perawallet/connect
 
 ```ts
 import { PeraWalletConnect } from "@perawallet/connect";
-import { BYOSigner, SentinelClient } from "@sentinel-ai/sdk";
+import { BYOSigner, SentinelClient } from "@sentinalapi/sdk";
 
 const pera = new PeraWalletConnect();
 const accounts = await pera.connect();
@@ -45,7 +45,7 @@ console.log(SentinelClient.getAssistantText(response));
 
 ```ts
 import { DeflyWalletConnect } from "@blockshake/defly-connect";
-import { BYOSigner, SentinelClient } from "@sentinel-ai/sdk";
+import { BYOSigner, SentinelClient } from "@sentinalapi/sdk";
 
 const defly = new DeflyWalletConnect();
 const accounts = await defly.connect();
@@ -63,7 +63,7 @@ const signer = new BYOSigner(accounts[0], async (txn) => {
 > ⚠️ **Never use in browser code.** Mnemonic is exposed in plaintext.
 
 ```ts
-import { MnemonicSigner, SentinelClient } from "@sentinel-ai/sdk";
+import { MnemonicSigner, SentinelClient } from "@sentinalapi/sdk";
 
 const signer = new MnemonicSigner(process.env.ALGORAND_MNEMONIC!);
 // signer.address → the Algorand address derived from the mnemonic
@@ -81,7 +81,7 @@ If you manage keys manually:
 
 ```ts
 import algosdk from "algosdk";
-import { BYOSigner, SentinelClient } from "@sentinel-ai/sdk";
+import { BYOSigner, SentinelClient } from "@sentinalapi/sdk";
 
 const account = algosdk.mnemonicToSecretKey(mnemonic);
 
@@ -97,7 +97,7 @@ const signer = new BYOSigner(account.addr, async (txn) => {
 Use when you sign the transaction externally (e.g., in a hardware wallet or secure enclave) and only have the signed bytes:
 
 ```ts
-import { PreSignedSigner } from "@sentinel-ai/sdk";
+import { PreSignedSigner } from "@sentinalapi/sdk";
 
 // Build txn manually, sign it externally, then:
 const signer = new PreSignedSigner(address, signedTxnBytes);

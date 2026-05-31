@@ -1,4 +1,4 @@
-# Examples — @sentinel-ai/sdk
+# Examples — @sentinalapi/sdk
 
 ---
 
@@ -9,7 +9,7 @@ Full example using environment variables:
 ```ts
 // Run with: SENTINEL_API_KEY=sk-sentinel-... SENTINEL_MNEMONIC="word1 ..." npx tsx example.ts
 
-import { MnemonicSigner, SentinelClient, SentinelError } from "@sentinel-ai/sdk";
+import { MnemonicSigner, SentinelClient, SentinelError } from "@sentinalapi/sdk";
 
 const client = new SentinelClient({
   apiKey: process.env.SENTINEL_API_KEY!,
@@ -49,7 +49,7 @@ try {
 ```tsx
 import React, { useState } from "react";
 import { PeraWalletConnect } from "@perawallet/connect";
-import { BYOSigner, SentinelClient, SentinelClient as SC } from "@sentinel-ai/sdk";
+import { BYOSigner, SentinelClient, SentinelClient as SC } from "@sentinalapi/sdk";
 
 const pera = new PeraWalletConnect();
 
@@ -114,7 +114,7 @@ import {
   submitSignedPayment,
   MnemonicSigner,
   SentinelClient,
-} from "@sentinel-ai/sdk";
+} from "@sentinalapi/sdk";
 
 const client = new SentinelClient({ apiKey: "sk-sentinel-...", network: "testnet" });
 const signer = new MnemonicSigner(process.env.SENTINEL_MNEMONIC!);
@@ -148,7 +148,7 @@ console.log(SentinelClient.getAssistantText(response));
 
 ```ts
 // app/ask/route.ts
-import { MnemonicSigner, SentinelClient } from "@sentinel-ai/sdk";
+import { MnemonicSigner, SentinelClient } from "@sentinalapi/sdk";
 import { NextResponse } from "next/server";
 
 const client = new SentinelClient({

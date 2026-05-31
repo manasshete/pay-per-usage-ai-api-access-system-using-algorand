@@ -1,4 +1,4 @@
-# API Reference — @sentinel-ai/sdk
+# API Reference — @sentinalapi/sdk
 
 ## `SentinelClient`
 
@@ -142,7 +142,7 @@ const signer = new PreSignedSigner(address, signedTxnBytes);
 ## Algorand Utilities
 
 ```ts
-import { buildPaymentTx, submitSignedPayment, createAlgodClient } from "@sentinel-ai/sdk";
+import { buildPaymentTx, submitSignedPayment, createAlgodClient } from "@sentinalapi/sdk";
 
 // Create algod client
 const algod = createAlgodClient("testnet");

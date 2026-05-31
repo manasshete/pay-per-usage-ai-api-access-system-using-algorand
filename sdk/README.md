@@ -1,8 +1,8 @@
-# @sentinel-ai/sdk
+# @sentinalapi/sdk
 
 > Official JavaScript/TypeScript SDK for the [Sentinel](https://github.com/lathi-aayush/pay-per-usage-ai-api-access-system-using-algorand) pay-per-use AI API marketplace powered by Algorand.
 
-[![npm version](https://img.shields.io/npm/v/@sentinel-ai/sdk.svg)](https://www.npmjs.com/package/@sentinel-ai/sdk)
+[![npm version](https://img.shields.io/npm/v/@sentinalapi/sdk.svg)](https://www.npmjs.com/package/@sentinalapi/sdk)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ---
@@ -21,7 +21,7 @@ This SDK handles the entire **invoke → pay → complete** flow:
 ## Install
 
 ```bash
-npm install @sentinel-ai/sdk algosdk
+npm install @sentinalapi/sdk algosdk
 ```
 
 ---
@@ -29,7 +29,7 @@ npm install @sentinel-ai/sdk algosdk
 ## Quick Start (Node.js)
 
 ```ts
-import { MnemonicSigner, SentinelClient } from "@sentinel-ai/sdk";
+import { MnemonicSigner, SentinelClient } from "@sentinalapi/sdk";
 
 const client = new SentinelClient({
   apiKey: process.env.SENTINEL_API_KEY!, // sk-sentinel-...
@@ -58,7 +58,7 @@ console.log(response.sentinelReceipt);
 
 ```ts
 import { PeraWalletConnect } from "@perawallet/connect";
-import { BYOSigner, SentinelClient } from "@sentinel-ai/sdk";
+import { BYOSigner, SentinelClient } from "@sentinalapi/sdk";
 
 const pera = new PeraWalletConnect();
 const [address] = await pera.connect();
@@ -127,7 +127,7 @@ import {
   SentinelAuthError,
   SentinelSessionExpired,
   SentinelUpstreamError,
-} from "@sentinel-ai/sdk";
+} from "@sentinalapi/sdk";
 
 try {
   const response = await client.chat(messages, signer);
@@ -165,7 +165,7 @@ import type {
   SentinelClientOptions,
   SentinelReceipt,
   ServicePublicInfo,
-} from "@sentinel-ai/sdk";
+} from "@sentinalapi/sdk";
 ```
 
 ---

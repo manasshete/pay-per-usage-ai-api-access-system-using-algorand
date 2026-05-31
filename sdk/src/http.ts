@@ -24,7 +24,7 @@ export class HttpClient {
     const headers: Record<string, string> = {
       Accept: "application/json",
       "Content-Type": "application/json",
-      "User-Agent": `@sentinel-ai/sdk@${SDK_VERSION}`,
+      "User-Agent": `@sentinalapi/sdk@${SDK_VERSION}`,
       "X-Sentinel-SDK-Version": SDK_VERSION,
     };
 

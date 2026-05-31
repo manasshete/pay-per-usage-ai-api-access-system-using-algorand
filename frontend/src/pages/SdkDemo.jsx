@@ -2,14 +2,14 @@ import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import MegaNav from "../components/MegaNav.jsx";
 
-const INSTALL_CMD = "npm install @sentinel-ai/sdk algosdk";
+const INSTALL_CMD = "npm install @sentinalapi/sdk algosdk";
 
 const CODE_SNIPPETS = {
   node: {
     label: "Node.js",
     lang: "TypeScript",
     icon: "terminal",
-    code: `import { MnemonicSigner, SentinelClient } from "@sentinel-ai/sdk";
+    code: `import { MnemonicSigner, SentinelClient } from "@sentinalapi/sdk";
 
 const client = new SentinelClient({
   apiKey: process.env.SENTINEL_API_KEY,  // sk-sentinel-...
@@ -36,7 +36,7 @@ console.log(response.sentinelReceipt);
     lang: "TypeScript",
     icon: "account_balance_wallet",
     code: `import { PeraWalletConnect } from "@perawallet/connect";
-import { BYOSigner, SentinelClient } from "@sentinel-ai/sdk";
+import { BYOSigner, SentinelClient } from "@sentinalapi/sdk";
 
 const pera = new PeraWalletConnect();
 const [address] = await pera.connect();
@@ -68,7 +68,7 @@ console.log(SentinelClient.getAssistantText(response));`,
   buildPaymentTx,
   submitSignedPayment,
   SentinelClient,
-} from "@sentinel-ai/sdk";
+} from "@sentinalapi/sdk";
 
 const client = new SentinelClient({ apiKey, network: "testnet" });
 
@@ -101,7 +101,7 @@ console.log(SentinelClient.getAssistantText(response));`,
     lang: "TypeScript",
     icon: "web",
     code: `// app/api/ask/route.ts — Next.js App Router server action
-import { MnemonicSigner, SentinelClient } from "@sentinel-ai/sdk";
+import { MnemonicSigner, SentinelClient } from "@sentinalapi/sdk";
 import { NextResponse } from "next/server";
 
 const client = new SentinelClient({
@@ -211,7 +211,7 @@ export default function SdkDemo() {
           <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 tracking-tight leading-tight font-headline">
             Build with{" "}
             <span className="bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-              @sentinel-ai/sdk
+              @sentinalapi/sdk
             </span>
           </h1>
           <p className="mt-4 text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
@@ -230,7 +230,7 @@ export default function SdkDemo() {
               View on GitHub
             </a>
             <a
-              href="https://www.npmjs.com/package/@sentinel-ai/sdk"
+              href="https://www.npmjs.com/package/@sentinalapi/sdk"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-800 rounded-full text-sm font-semibold hover:bg-slate-200 transition-colors"

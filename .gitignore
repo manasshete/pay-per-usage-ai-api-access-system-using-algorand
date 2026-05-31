@@ -9,3 +9,4 @@ chatbot/chat-backend/node_modules/
 .cursor/
 .git/
 .github/
+.npmrc

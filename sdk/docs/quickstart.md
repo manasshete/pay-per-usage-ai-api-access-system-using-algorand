@@ -1,11 +1,11 @@
-# Quickstart — @sentinel-ai/sdk
+# Quickstart — @sentinalapi/sdk
 
 Get from zero to a working Sentinel AI API call in under 5 minutes.
 
 ## 1. Install
 
 ```bash
-npm install @sentinel-ai/sdk algosdk
+npm install @sentinalapi/sdk algosdk
 ```
 
 ## 2. Get an API Key
@@ -22,7 +22,7 @@ Top-up a TestNet wallet at [bank.testnet.algorand.network](https://bank.testnet.
 ## 4. Write your first call (Node.js)
 
 ```ts
-import { MnemonicSigner, SentinelClient } from "@sentinel-ai/sdk";
+import { MnemonicSigner, SentinelClient } from "@sentinalapi/sdk";
 
 const client = new SentinelClient({
   apiKey: process.env.SENTINEL_API_KEY!,
