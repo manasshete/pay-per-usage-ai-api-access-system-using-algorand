@@ -226,6 +226,43 @@ export default function HowItWorks() {
               </div>
             </div>
           </section>
+
+          <section>
+            <h2
+              id="developer-sdk"
+              className="text-2xl font-semibold tracking-tight text-slate-900 mb-4 border-b border-slate-100 pb-2"
+            >
+              Developer SDK
+            </h2>
+            <div className="relative overflow-hidden bg-gradient-to-br from-indigo-900 to-indigo-950 text-white rounded-xl p-8 border border-indigo-950 shadow-sm">
+              <div className="relative flex flex-col md:flex-row items-center gap-6">
+                <div className="flex-1 space-y-3">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/30 text-indigo-200">
+                    NPM Package · @sentinalapi/sdk
+                  </span>
+                  <h3 className="text-xl font-semibold tracking-tight">
+                    Integrate Pay-Per-Use AI in Minutes
+                  </h3>
+                  <p className="text-[14px] text-indigo-200 leading-relaxed">
+                    Build client-side or server-side applications that communicate directly with the Sentinel AI gateway. 
+                    The SDK abstracts the complete three-phase payment flow (invoke, pay, complete) into a single, seamless 
+                    <code className="bg-indigo-900/60 px-1 py-0.5 rounded font-mono text-white text-[12px] mx-1">client.chat()</code> method.
+                  </p>
+                  <div className="pt-2">
+                    <a
+                      href="/sdk-demo"
+                      className="inline-flex items-center gap-1 text-sm font-semibold text-white hover:text-indigo-200 transition-colors"
+                    >
+                      Explore Interactive SDK Demo →
+                    </a>
+                  </div>
+                </div>
+                <div className="shrink-0 flex items-center justify-center w-20 h-20 rounded-full bg-indigo-800/40 border border-indigo-700/50">
+                  <span className="material-symbols-outlined text-4xl text-indigo-300">integration_instructions</span>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
 
@@ -260,6 +297,15 @@ export default function HowItWorks() {
                 className={navLinkClass("core-features")}
               >
                 Core Features
+              </a>
+            </li>
+            <li>
+              <a
+                href="#developer-sdk"
+                onClick={(e) => handleClick(e, "developer-sdk")}
+                className={navLinkClass("developer-sdk")}
+              >
+                Developer SDK
               </a>
             </li>
           </ul>

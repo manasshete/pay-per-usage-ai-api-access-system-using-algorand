@@ -5,6 +5,7 @@ export default function DocsSidebar() {
   const location = useLocation();
   const [expanded, setExpanded] = useState({
     protocol: true,
+    sdk: true,
   });
 
   const toggle = (section) => setExpanded(p => ({ ...p, [section]: !p[section] }));
@@ -58,12 +59,52 @@ export default function DocsSidebar() {
               </ul>
             )}
           </li>
-          
+
           <li className="pt-4 pb-1">
-            <button className="flex items-center justify-between w-full px-3 py-1.5 rounded hover:bg-slate-50 text-slate-900 transition-colors">
-              <span>Settings</span>
-              <span className="material-symbols-outlined text-[16px] text-slate-400">expand_more</span>
+            <button 
+              onClick={() => toggle("sdk")}
+              className="flex items-center justify-between w-full px-3 py-1.5 rounded hover:bg-slate-50 transition-colors"
+            >
+              <span className={`text-slate-900 ${isActive('/sdk-demo') ? 'font-semibold' : ''}`}>SDK Client</span>
+              <span className="material-symbols-outlined text-[16px] text-slate-400">
+                {expanded.sdk ? "expand_more" : "chevron_right"}
+              </span>
             </button>
+            
+            {expanded.sdk && (
+              <ul className="mt-2 ml-3 pl-3 border-l border-slate-200 space-y-1">
+                <li>
+                  <Link 
+                    to="/sdk-demo" 
+                    className={`block px-3 py-1.5 rounded transition-colors ${isActive('/sdk-demo') ? 'bg-indigo-50/50 text-indigo-700 font-semibold' : 'hover:bg-slate-50 text-slate-500 hover:text-slate-800'}`}
+                  >
+                    Interactive Demo
+                  </Link>
+                </li>
+                <li>
+                  <a 
+                    href="https://www.npmjs.com/package/@sentinalapi/sdk"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block px-3 py-1.5 rounded transition-colors hover:bg-slate-50 text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                  >
+                    npm Package
+                    <span className="material-symbols-outlined text-[12px] text-slate-400">open_in_new</span>
+                  </a>
+                </li>
+                <li>
+                  <a 
+                    href="https://github.com/lathi-aayush/pay-per-usage-ai-api-access-system-using-algorand/tree/main/sdk"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block px-3 py-1.5 rounded transition-colors hover:bg-slate-50 text-slate-500 hover:text-slate-800 flex items-center gap-1"
+                  >
+                    GitHub Source
+                    <span className="material-symbols-outlined text-[12px] text-slate-400">open_in_new</span>
+                  </a>
+                </li>
+              </ul>
+            )}
           </li>
           
         </ul>
