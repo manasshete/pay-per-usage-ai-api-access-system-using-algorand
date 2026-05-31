@@ -160,6 +160,12 @@ function collectMobileLinks() {
     path: "/docs/how-it-works",
     icon: "help",
   });
+  links.push({
+    label: "SDK",
+    sub: "JavaScript / TypeScript client",
+    path: "/sdk-demo",
+    icon: "code",
+  });
   return links;
 }
 
@@ -299,6 +305,12 @@ export default function MegaNav({ enterWithPera }) {
               className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
             >
               How It Works
+            </Link>
+            <Link
+              to="/sdk-demo"
+              className="px-3 py-1.5 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer"
+            >
+              SDK
             </Link>
 
 

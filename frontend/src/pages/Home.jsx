@@ -450,6 +450,11 @@ export default function Home() {
                     x402 Docs
                   </Link>
                 </li>
+                <li>
+                  <Link to="/sdk-demo" className="text-slate-500 hover:text-indigo-600 transition-colors duration-300 font-medium cursor-pointer">
+                    Developer SDK
+                  </Link>
+                </li>
               </ul>
             </div>
             <div>

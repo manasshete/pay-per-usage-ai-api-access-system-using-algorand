@@ -132,6 +132,30 @@ router.get("/agent-context", async (_req, res) => {
 });
 
 
+router.get("/:id/public", async (req, res) => {
+  const id = req.params.id;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return res.status(400).json({ error: "Invalid service id" });
+  }
+  const service = await Service.findById(id).lean();
+  if (!service || service.isPaused) {
+    return res.status(404).json({ error: "Not found" });
+  }
+  res.json({
+    id: String(service._id),
+    name: service.title,
+    description: service.description || "",
+    pricePerThousandTokens: Number(service.pricePerThousandTokens),
+    minimumChargeAlgo: Number(service.minimumChargeAlgo),
+    aiProvider: service.aiProvider ?? null,
+    modelName: service.modelName || "",
+    averageRating: Number(service.averageRating) || 0,
+    reviewCount: Number(service.reviewCount) || 0,
+    x402Enabled: Boolean(service.x402Enabled),
+    providerConfigured: Boolean(service.aiProvider && service.encryptedApiKey),
+  });
+});
+
 router.get("/:id", async (req, res) => {
   const id = req.params.id;
   if (!mongoose.Types.ObjectId.isValid(id)) {

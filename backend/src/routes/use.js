@@ -26,6 +26,11 @@ import { submitProofOfIntelligence } from "../services/proofOfIntelligence.js";
 
 const router = Router();
 
+router.use((_req, res, next) => {
+  res.setHeader("X-Sentinel-SDK-Version", "1.0.0");
+  next();
+});
+
 const useRateLimit = rateLimit({
   windowMs: 60 * 1000,
   max: 30,

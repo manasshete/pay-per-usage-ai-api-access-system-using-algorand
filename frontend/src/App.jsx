@@ -34,6 +34,7 @@ const StudioAnalytics = lazy(() => import("./pages/studio/Analytics.jsx"));
 import X402Docs from "./pages/X402Docs.jsx";
 import X402DevDocs from "./pages/X402DevDocs.jsx";
 import HowItWorks from "./pages/HowItWorks.jsx";
+import SdkDemo from "./pages/SdkDemo.jsx";
 const WorkflowStudioHub = lazy(() => import("./pages/WorkflowStudioHub.jsx"));
 const StudioChat = lazy(() => import("./pages/studio/StudioChat.jsx"));
 const WorkflowBuilder = lazy(() => import("./pages/WorkflowBuilder.jsx"));
@@ -102,6 +103,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/sdk-demo" element={<SdkDemo />} />
       <Route
         path="/profile"
         element={
