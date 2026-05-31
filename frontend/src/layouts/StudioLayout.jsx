@@ -23,9 +23,6 @@ const nav = [
   { id: "analytics", path: "/studio/analytics", icon: "bar_chart", label: "Analytics" },
   { id: "plan", path: "/studio/plan", icon: "workspace_premium", label: "Plan & upgrade" },
   { id: "queue", path: "/studio/queue", icon: "schedule", label: "Render Queue" },
-  { id: "exports", path: "/studio/exports", icon: "upload_file", label: "Exports" },
-  { id: "storage", path: "/studio/storage", icon: "database", label: "Storage" },
-  { id: "apps", path: "/studio/apps", icon: "apps", label: "Apps" },
 ];
 
 function sidebarActiveId(pathname) {
@@ -63,16 +60,16 @@ export default function StudioLayout() {
           <Link
             to="/"
             className="flex items-center gap-2.5 rounded-md p-2 -mx-2 hover:bg-slate-100 transition-colors group"
-            title="Back to Sentinal home"
+            title="Back to Sentinel home"
           >
             <img
               src={logo}
-              alt="Sentinal"
+              alt="Sentinel"
               className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 shrink-0"
             />
             <div className="min-w-0">
               <p className="font-headline font-semibold text-slate-900 text-sm group-hover:text-[#031634]">
-                Sentinal
+                Sentinel
               </p>
               <p className="text-slate-500 text-[10px] mt-0.5 truncate">Studio · tap for home</p>
             </div>

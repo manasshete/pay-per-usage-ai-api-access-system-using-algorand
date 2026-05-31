@@ -23,17 +23,41 @@ export function toPublicService(doc) {
   return o;
 }
 
-router.get("/", async (_req, res) => {
-  const services = await Service.find().sort({ createdAt: -1 }).lean();
-  res.json(
-    services.map((s) => {
-      const { encryptedApiKey: _e, ...rest } = s;
-      return {
-        ...rest,
-        providerConfigured: Boolean(s.aiProvider && s.encryptedApiKey),
-      };
-    })
-  );
+function stripServiceForPublic(s) {
+  const { encryptedApiKey: _e, ...rest } = s;
+  return {
+    ...rest,
+    providerConfigured: Boolean(s.aiProvider && s.encryptedApiKey),
+    averageRating: Number(s.averageRating) || 0,
+    reviewCount: Number(s.reviewCount) || 0,
+  };
+}
+
+function buildServicesFilter(query) {
+  const filter = { isPaused: false };
+  const search = String(query.search || "").trim();
+  const provider = String(query.provider || "").trim().toLowerCase();
+  const x402 = String(query.x402 || "").trim().toLowerCase();
+
+  if (search) {
+    filter.$or = [
+      { title: { $regex: search, $options: "i" } },
+      { description: { $regex: search, $options: "i" } },
+    ];
+  }
+  if (provider && AI_PROVIDERS.includes(provider)) {
+    filter.aiProvider = provider;
+  }
+  if (x402 === "true" || x402 === "1") {
+    filter.x402Enabled = true;
+  }
+  return filter;
+}
+
+router.get("/", async (req, res) => {
+  const filter = buildServicesFilter(req.query);
+  const services = await Service.find(filter).sort({ createdAt: -1 }).lean();
+  res.json(services.map(stripServiceForPublic));
 });
 
 /**
@@ -115,11 +139,7 @@ router.get("/:id", async (req, res) => {
   }
   const service = await Service.findById(id).lean();
   if (!service) return res.status(404).json({ error: "Not found" });
-  const { encryptedApiKey: _e, ...rest } = service;
-  res.json({
-    ...rest,
-    providerConfigured: Boolean(service.aiProvider && service.encryptedApiKey),
-  });
+  res.json(stripServiceForPublic(service));
 });
 
 router.post(

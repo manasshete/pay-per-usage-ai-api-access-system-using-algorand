@@ -79,6 +79,10 @@ export default defineConfig({
         target: "http://localhost:5001",
         changeOrigin: true,
       },
+      "/x402-test": {
+        target: "http://localhost:5001",
+        changeOrigin: true,
+      },
     },
   },
 });

@@ -1,11 +1,66 @@
 import { Router } from "express";
-import { query, validationResult } from "express-validator";
+import { param, query, validationResult } from "express-validator";
 import { Service } from "../models/Service.js";
 import { ApiUsageLog } from "../models/ApiUsageLog.js";
+import { User } from "../models/User.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
-import { creatorServicesOwnedBy } from "../utils/userWallet.js";
+import { canonicalWalletAddress, creatorServicesOwnedBy } from "../utils/userWallet.js";
 
 const router = Router();
+
+function stripServiceForPublic(s) {
+  const { encryptedApiKey: _e, ...rest } = s;
+  return {
+    ...rest,
+    providerConfigured: Boolean(s.aiProvider && s.encryptedApiKey),
+    averageRating: Number(s.averageRating) || 0,
+    reviewCount: Number(s.reviewCount) || 0,
+  };
+}
+
+router.get(
+  "/public/:walletAddress",
+  param("walletAddress").isString().trim().notEmpty(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    let wallet;
+    try {
+      wallet = canonicalWalletAddress(req.params.walletAddress);
+    } catch {
+      return res.status(400).json({ error: "Invalid wallet address" });
+    }
+
+    const profileUser = await User.findOne({ walletAddress: wallet })
+      .select("displayName photoURL role createdAt")
+      .lean();
+
+    const services = await Service.find({
+      ...creatorServicesOwnedBy(wallet),
+      isPaused: false,
+    })
+      .sort({ totalUses: -1, createdAt: -1 })
+      .lean();
+
+    const totalRevenue = services.reduce((sum, s) => sum + (Number(s.totalRevenue) || 0), 0);
+    const totalUses = services.reduce((sum, s) => sum + (Number(s.totalUses) || 0), 0);
+
+    res.json({
+      walletAddress: wallet,
+      displayName: profileUser?.displayName ?? null,
+      photoURL: profileUser?.photoURL ?? null,
+      role: profileUser?.role ?? "creator",
+      memberSince: profileUser?.createdAt ?? null,
+      totalRevenue,
+      totalUses,
+      serviceCount: services.length,
+      services: services.map(stripServiceForPublic),
+    });
+  }
+);
 
 /** Successful completions only (excludes legacy docs without `success`) */
 const SUCCESS_LOG_MATCH = {

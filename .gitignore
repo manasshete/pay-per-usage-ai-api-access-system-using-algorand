@@ -6,3 +6,6 @@ build/
 .vercel/
 chatbot/chat-front/node_modules/
 chatbot/chat-backend/node_modules/
+.cursor/
+.git/
+.github/

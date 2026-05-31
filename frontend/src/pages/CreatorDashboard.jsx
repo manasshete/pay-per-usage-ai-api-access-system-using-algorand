@@ -47,6 +47,16 @@ export default function CreatorDashboard() {
     }
   }
 
+  async function toggleX402(svc, nextX402) {
+    try {
+      await api.patch(`/api/services/${svc._id}`, { x402Enabled: nextX402 });
+      toast.success(nextX402 ? "x402 enabled" : "x402 disabled");
+      await load();
+    } catch (e) {
+      toast.error(e?.response?.data?.error || "Update failed");
+    }
+  }
+
   async function removeService(svc) {
     if (!window.confirm(`Delete “${svc.title}”? This cannot be undone.`)) return;
     try {
@@ -161,6 +171,17 @@ export default function CreatorDashboard() {
                         className="text-xs px-3 py-1.5 rounded-md border border-outline-variant hover:bg-surface-container-low"
                       >
                         {s.isPaused ? "Resume" : "Pause"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleX402(s, !s.x402Enabled)}
+                        className={`text-xs px-3 py-1.5 rounded-md border ${
+                          s.x402Enabled 
+                            ? "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100" 
+                            : "border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+                        }`}
+                      >
+                        {s.x402Enabled ? "x402: On" : "x402: Off"}
                       </button>
                       <button
                         type="button"

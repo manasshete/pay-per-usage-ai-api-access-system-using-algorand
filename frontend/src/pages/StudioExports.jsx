@@ -1,9 +1,12 @@
 import React from "react";
+import ComingSoon from "../components/ComingSoon.jsx";
+
 export default function StudioExports() {
   return (
-    <div className="pt-6 max-w-5xl">
-      <h1 className="font-headline text-2xl font-semibold text-primary mb-2">Exports</h1>
-      <p className="text-sm text-on-surface-variant mb-6">Track recently completed output files from studio workflows.</p>
-    </div>
+    <ComingSoon
+      title="Exports"
+      description="Track recently completed output files from studio workflows. This feature is under development."
+      icon="upload_file"
+    />
   );
 }

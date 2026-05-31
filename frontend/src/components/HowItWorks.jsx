@@ -518,36 +518,7 @@ export default function HowItWorks({ enterWithPera }) {
         </div>
       </div>
 
-      {/* ── bottom CTA ── */}
-      <div
-        className="flex flex-col sm:flex-row items-center justify-between gap-6 bg-gradient-to-r from-[#031634] to-indigo-900 rounded-3xl p-8 text-white shadow-2xl"
-        style={{
-          opacity: studioVisible ? 1 : 0,
-          transform: studioVisible ? "translateY(0)" : "translateY(20px)",
-          transition: "opacity 0.6s 0.5s ease, transform 0.6s 0.5s ease",
-        }}
-      >
-        <div>
-          <h3 className="font-headline text-xl font-bold">Ready to get started?</h3>
-          <p className="text-slate-300 text-sm mt-1">Connect your Pera Wallet and start in minutes.</p>
-        </div>
-        <div className="flex gap-3 flex-shrink-0">
-          <button
-            type="button"
-            onClick={goMarketplace}
-            className="px-5 py-2.5 bg-white text-[#031634] rounded-xl text-sm font-bold hover:bg-slate-100 transition-colors cursor-pointer"
-          >
-            Explore Marketplace
-          </button>
-          <button
-            type="button"
-            onClick={goStudio}
-            className="px-5 py-2.5 border border-white/30 rounded-xl text-sm font-bold hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            Open Studio
-          </button>
-        </div>
-      </div>
+
     </section>
   );
 }

@@ -8,7 +8,6 @@ export default function UserSidebar({ activeTab }) {
     { id: "home", path: "/dashboard/home", icon: "home", label: "Home" },
     { id: "marketplace", path: "/dashboard/browse", icon: "storefront", label: "Marketplace" },
     { id: "studio", path: "/studio", icon: "widgets", label: "Studio" },
-    { id: "apps", path: "/studio/apps", icon: "apps", label: "Apps" },
     { id: "analytics", path: "/dashboard/usage", icon: "insights", label: "Analytics" },
     { id: "billing", path: "/billing/transactions", icon: "receipt_long", label: "Billing" },
   ];
@@ -18,31 +17,26 @@ export default function UserSidebar({ activeTab }) {
       items: [
         { label: "Browse APIs", path: "/dashboard/browse" },
         { label: "My API Keys", path: "/dashboard/keys" },
+        { label: "Creators", path: "/dashboard/creators" },
         { label: "Usage", path: "/dashboard/usage" },
         { label: "Transactions", path: "/billing/transactions" },
-        { label: "x402 Agentic Docs", path: "/docs/x402" },
+        { label: "x402 Docs", path: "/docs/x402" },
       ],
     },
     {
       title: "Studio",
       items: [
         { label: "Blogging Agent", path: "/studio/blogging-agent" },
-        { label: "Video Editor", path: "/studio/video-editor" },
-        { label: "Data Analyst", path: "/studio/data-analyst" },
         { label: "Projects", path: "/studio/projects" },
         { label: "Render Queue", path: "/studio/queue" },
       ],
     },
     {
       title: "Creator Dashboard",
-      items: user?.role === "creator"
-        ? [
-            { label: "Endpoints", path: "/creator" },
-            { label: "Revenue", path: "/creator" },
-            { label: "Analytics", path: "/creator" },
-            { label: "Call Logs", path: "/creator" },
-          ]
-        : [{ label: "Switch to creator role", path: "/" }],
+      items:
+        user?.role === "creator"
+          ? [{ label: "Go to Creator Dashboard", path: "/creator" }]
+          : [{ label: "Switch to creator role", path: "/" }],
     },
   ];
 

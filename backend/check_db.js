@@ -28,8 +28,8 @@ async function run() {
       await Service.deleteMany({ title: "" });
 
       const newService = await Service.create({
-        title: "Sentinal AI Official Chat",
-        description: "Official Sentinal AI assistant powered by Groq LLama 3",
+        title: "Sentinel AI Official Chat",
+        description: "Official Sentinel AI assistant powered by Groq LLama 3",
         pricePerThousandTokens: 0.005,
         minimumChargeAlgo: 0.01,
         creatorWallet: "ICM4Y4YVJWSBOV4LQIBXYVTHF2NDOJSUAPTX2DE4HQTPVDS5ZQCXP3MHLI",

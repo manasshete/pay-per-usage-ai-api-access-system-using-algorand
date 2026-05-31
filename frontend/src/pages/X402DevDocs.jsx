@@ -14,7 +14,7 @@ const API_ENDPOINTS = [
   "services": [
     {
       "id": "64f3a...",
-      "name": "Sentinal AI Official Chat",
+      "name": "Sentinel AI Official Chat",
       "description": "General-purpose AI assistant endpoint.",
       "costPerCall": 0.001,
       "creatorWallet": "ALGO_WALLET_ADDRESS...",

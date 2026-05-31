@@ -17,6 +17,7 @@ import {
 import { chargeForTokens, wordsToApproxTokens } from "../utils/tokenPricing.js";
 import { useTokenEstimate } from "../hooks/useTokenEstimate.js";
 import { getBurnerWallet } from "../wallet/burner.js";
+import { StarRating } from "../components/MarketplaceCard.jsx";
 
 const EXPLORER_TX = "https://testnet.algoexplorer.io/tx/";
 
@@ -43,6 +44,12 @@ export default function ServiceDetail() {
   const [aiPreview, setAiPreview] = useState(null);
   const [lastReceipt, setLastReceipt] = useState(null);
   const [quotedCharge, setQuotedCharge] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const apiBase = getPublicApiBase();
 
@@ -86,6 +93,58 @@ export default function ServiceDetail() {
       cancelled = true;
     };
   }, [id]);
+
+  async function loadReviews() {
+    if (!id) return;
+    setReviewsLoading(true);
+    try {
+      const { data } = await api.get(`/api/reviews/${id}`);
+      setReviews(Array.isArray(data) ? data : []);
+    } catch {
+      setReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadReviews();
+  }, [id]);
+
+  async function submitReview(e) {
+    e.preventDefault();
+    if (!user) {
+      toast.error("Sign in to leave a review");
+      return;
+    }
+    setSubmittingReview(true);
+    try {
+      const { data } = await api.post("/api/reviews", {
+        serviceId: id,
+        rating: reviewRating,
+        reviewText: reviewText.trim(),
+      });
+      if (data?.averageRating != null) {
+        setService((prev) =>
+          prev
+            ? {
+                ...prev,
+                averageRating: data.averageRating,
+                reviewCount: data.reviewCount,
+              }
+            : prev
+        );
+      }
+      await loadReviews();
+      setShowReviewModal(false);
+      setReviewText("");
+      toast.success("Review saved");
+    } catch (err) {
+      toast.error(err?.response?.data?.error || "Could not save review");
+    } finally {
+      setSubmittingReview(false);
+    }
+  }
 
   async function generateKey() {
     if (!id || !/^[a-f0-9]{24}$/i.test(id)) {
@@ -281,6 +340,9 @@ curl -sS "${apiBase}/api/use" \\
 
       <div className="pb-12">
         <h1 className="font-headline text-3xl font-semibold text-primary">{service.title}</h1>
+        <div className="mt-3">
+          <StarRating rating={service.averageRating} reviewCount={service.reviewCount} size="lg" />
+        </div>
         <p className="mt-4 text-on-surface-variant leading-relaxed">{service.description}</p>
 
         <div className="mt-6 flex flex-wrap gap-3 text-sm">
@@ -293,6 +355,17 @@ curl -sS "${apiBase}/api/use" \\
           <span className="px-3 py-1 rounded-md bg-white border border-surface-variant">
             Calls: <strong>{service.totalUses ?? 0}</strong>
           </span>
+          {service.creatorWallet && (
+            <span className="px-3 py-1 rounded-md bg-white border border-surface-variant">
+              Creator:{" "}
+              <Link
+                to={`/dashboard/creators/${encodeURIComponent(service.creatorWallet)}`}
+                className="text-secondary hover:underline font-medium"
+              >
+                {devShort}
+              </Link>
+            </span>
+          )}
         </div>
 
         <div className="mt-8 p-6 bg-white border border-surface-variant rounded-md editorial-shadow space-y-6">
@@ -344,6 +417,49 @@ curl -sS "${apiBase}/api/use" \\
             </div>
           )}
         </div>
+
+        <section className="mt-8 p-6 bg-white border border-surface-variant rounded-md editorial-shadow">
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <h2 className="font-semibold text-primary">Reviews</h2>
+            <button
+              type="button"
+              onClick={() => setShowReviewModal(true)}
+              className="text-sm bg-secondary text-on-secondary px-4 py-2 rounded-md hover:opacity-90"
+            >
+              Write a review
+            </button>
+          </div>
+          {reviewsLoading ? (
+            <p className="text-sm text-on-surface-variant">Loading reviews…</p>
+          ) : reviews.length === 0 ? (
+            <p className="text-sm text-on-surface-variant">No reviews yet. Be the first to share feedback.</p>
+          ) : (
+            <ul className="space-y-4">
+              {reviews.map((r) => (
+                <li key={r.id} className="border-b border-surface-variant pb-4 last:border-0 last:pb-0">
+                  <div className="flex items-center gap-3">
+                    {r.photoURL ? (
+                      <img src={r.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-xs font-semibold">
+                        {(r.displayName || r.userWallet || "?").charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-sm font-medium text-primary">
+                        {r.displayName || shortenWallet(r.userWallet)}
+                      </p>
+                      <StarRating rating={r.rating} showCount={false} />
+                    </div>
+                  </div>
+                  {r.reviewText ? (
+                    <p className="mt-2 text-sm text-on-surface-variant leading-relaxed">{r.reviewText}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
       </div>
 
       {showKeyModal && apiKey && (
@@ -392,6 +508,67 @@ curl -sS "${apiBase}/api/use" \\
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {showReviewModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <form
+            onSubmit={submitReview}
+            className="bg-surface-container-lowest max-w-md w-full rounded-md border border-surface-variant p-6 shadow-xl"
+          >
+            <h2 className="font-headline text-xl font-semibold text-primary">Write a review</h2>
+            <p className="text-sm text-on-surface-variant mt-1">
+              One review per account. Submitting again updates your rating.
+            </p>
+            <div className="mt-4">
+              <p className="text-xs font-medium text-on-surface-variant mb-2">Rating</p>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setReviewRating(star)}
+                    className={`text-2xl ${star <= reviewRating ? "text-amber-500" : "text-slate-300"}`}
+                    aria-label={`${star} stars`}
+                  >
+                    ★
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="block mt-4">
+              <span className="text-xs font-medium text-on-surface-variant">Comment (optional)</span>
+              <textarea
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                rows={4}
+                maxLength={2000}
+                className="mt-1 w-full border border-outline-variant rounded-md px-3 py-2 text-sm"
+                placeholder="Share your experience with this API…"
+              />
+            </label>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="submit"
+                disabled={submittingReview}
+                className="bg-primary text-white px-4 py-2 rounded-md text-sm disabled:opacity-50"
+              >
+                {submittingReview ? "Saving…" : "Submit review"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowReviewModal(false)}
+                className="text-sm text-on-surface-variant underline"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       )}
 

@@ -15,6 +15,7 @@ import StudioQueue from "./pages/StudioQueue.jsx";
 import StudioExports from "./pages/StudioExports.jsx";
 import StudioStorage from "./pages/StudioStorage.jsx";
 import MarketplaceCreators from "./pages/MarketplaceCreators.jsx";
+import CreatorProfile from "./pages/CreatorProfile.jsx";
 import MarketplaceLayout from "./layouts/MarketplaceLayout.jsx";
 import StudioLayout from "./layouts/StudioLayout.jsx";
 import DocsLayout from "./layouts/DocsLayout.jsx";
@@ -143,11 +144,12 @@ export default function App() {
         <Route index element={<Navigate to="home" replace />} />
         <Route path="home" element={<UserDashboard />} />
         <Route path="browse" element={<UserMarketplace />} />
-        <Route path="featured" element={<UserMarketplace />} />
-        <Route path="categories" element={<UserMarketplace />} />
+        <Route path="featured" element={<Navigate to="/dashboard/browse" replace />} />
+        <Route path="categories" element={<Navigate to="/dashboard/browse" replace />} />
         <Route path="keys" element={<UserDashboard />} />
         <Route path="usage" element={<PredictionDashboard />} />
         <Route path="creators" element={<MarketplaceCreators />} />
+        <Route path="creators/:walletAddress" element={<CreatorProfile />} />
         <Route
           path="services/:id"
           element={
@@ -158,19 +160,12 @@ export default function App() {
         />
       </Route>
 
-      <Route
-        path="/docs"
-        element={
-          <Guard role="user">
-            <DocsLayout />
-          </Guard>
-        }
-      >
-        <Route index element={<Navigate to="x402" replace />} />
-        <Route path="home" element={<Navigate to="x402" replace />} />
+      <Route path="/docs" element={<DocsLayout />}>
+        <Route index element={<Navigate to="how-it-works" replace />} />
+        <Route path="home" element={<Navigate to="how-it-works" replace />} />
+        <Route path="how-it-works" element={<HowItWorks />} />
         <Route path="x402" element={<X402Docs />} />
         <Route path="x402-api" element={<X402DevDocs />} />
-        <Route path="how-it-works" element={<HowItWorks />} />
       </Route>
 
       <Route

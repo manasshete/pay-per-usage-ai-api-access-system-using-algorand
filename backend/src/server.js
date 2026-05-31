@@ -22,6 +22,7 @@ import profileRoutes from "./routes/profile.js";
 import devRoutes from "./routes/dev.js";
 import studioRoutes from "./routes/studio.routes.js";
 import x402Routes from "./routes/x402.js";
+import reviewsRoutes from "./routes/reviews.js";
 import { startPublishingWorker } from "./workers/publishingWorker.js";
 import { startScheduledPublishScheduler } from "./services/scheduledPublishScheduler.js";
 import { loadClipCraftConfig } from "./studio/clipcraft/config/loadConfig.js";
@@ -81,6 +82,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/dev", devRoutes);
 app.use("/api/studio", studioRoutes);
 app.use("/api/x402", x402Routes);
+app.use("/api/reviews", reviewsRoutes);
 
 app.get("/x402-test", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "..", "frontend", "x402-test.html"));

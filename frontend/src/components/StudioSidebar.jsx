@@ -4,14 +4,12 @@ import { Link } from "react-router-dom";
 export default function StudioSidebar({ activeTab }) {
   const tabs = [
     { id: "studio-home", path: "/studio", icon: "home", label: "Studio Home" },
-    { id: "video-editor", path: "/studio/video-editor", icon: "movie", label: "Video Editor" },
-    { id: "blog-writer", path: "/studio/blog-writer", icon: "article", label: "Blog Writer" },
-    { id: "data-analyst", path: "/studio/data-analyst", icon: "monitoring", label: "Data Analyst" },
+    { id: "blogging-agent", path: "/studio/blogging-agent", icon: "article", label: "Blogging Agent" },
+    { id: "clipcraft", path: "/studio/clipcraft", icon: "movie", label: "ClipCraft" },
+    { id: "workflows", path: "/studio/workflows", icon: "account_tree", label: "Workflows" },
     { id: "projects", path: "/studio/projects", icon: "folder", label: "Projects" },
     { id: "queue", path: "/studio/queue", icon: "schedule", label: "Render Queue" },
-    { id: "exports", path: "/studio/exports", icon: "upload_file", label: "Exports" },
-    { id: "storage", path: "/studio/storage", icon: "database", label: "Storage" },
-    { id: "apps", path: "/studio/apps", icon: "apps", label: "Apps" },
+    { id: "chat", path: "/studio/chat", icon: "chat", label: "Studio Chat" },
   ];
 
   return (

@@ -27,6 +27,7 @@ export default function CreateService() {
   const [aiProvider, setAiProvider] = useState("groq");
   const [providerApiKey, setProviderApiKey] = useState("");
   const [modelName, setModelName] = useState("llama-3.3-70b-versatile");
+  const [x402Enabled, setX402Enabled] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [providerCostPerThousand, setProviderCostPerThousand] = useState("");
@@ -88,6 +89,7 @@ export default function CreateService() {
         aiProvider,
         providerApiKey: providerApiKey.trim(),
         modelName: modelName.trim(),
+        x402Enabled,
       });
       toast.success("Service published — your key is encrypted on the server");
       navigate("/creator");
@@ -176,6 +178,19 @@ export default function CreateService() {
               placeholder="e.g. llama-3.3-70b-versatile, gpt-4o, claude-3-5-sonnet-20241022"
               required
             />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="x402Enabled"
+              checked={x402Enabled}
+              onChange={(e) => setX402Enabled(e.target.checked)}
+              className="w-4 h-4 text-primary bg-surface border-outline-variant rounded focus:ring-primary"
+            />
+            <label htmlFor="x402Enabled" className="text-sm font-medium text-primary">
+              Enable x402 (Keyless Payment Support)
+            </label>
           </div>
 
           <div className="border border-dashed border-outline-variant rounded-md p-4 space-y-3 bg-surface-container-low/30">

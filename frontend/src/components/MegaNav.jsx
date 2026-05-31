@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useRef, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
 import ProfileDropdown from "./ProfileDropdown.jsx";
 import UserLiveWalletBar from "./UserLiveWalletBar.jsx";
@@ -21,9 +21,9 @@ const menus = {
       {
         title: "Protocol",
         items: [
-          { icon: "integration_instructions", label: "x402 Payments",    sub: "Keyless agent transactions",   path: "/docs/x402",    auth: true,  badge: "NEW" },
+          { icon: "integration_instructions", label: "x402 Payments",    sub: "Keyless agent transactions",   path: "/docs/x402",    badge: "NEW" },
           { icon: "monitoring",               label: "Analytics",         sub: "Usage & revenue dashboards",  path: "/studio/analytics",  auth: true  },
-          { icon: "smart_toy",                label: "Agentic Workflows", sub: "n8n & LangChain integration", path: "/docs/x402",    auth: true  },
+          { icon: "smart_toy",                label: "Agentic Workflows", sub: "n8n & LangChain integration", path: "/docs/x402-api" },
         ],
       },
     ],
@@ -35,15 +35,14 @@ const menus = {
         title: "For Developers",
         items: [
           { icon: "code",      label: "Build AI Apps",       sub: "Integrate AI in minutes",        path: "/dashboard/browse",  auth: true },
-          { icon: "api",       label: "REST & x402 APIs",    sub: "Keyless M2M payments",            path: "/docs/x402",    auth: true },
-          { icon: "hub",       label: "Multi-Agent Systems", sub: "Orchestrate autonomous agents",   path: "/docs/x402",    auth: true },
+          { icon: "api",       label: "REST & x402 APIs",    sub: "Keyless M2M payments",            path: "/docs/x402-api" },
+          { icon: "hub",       label: "Multi-Agent Systems", sub: "Orchestrate autonomous agents",   path: "/docs/x402" },
         ],
       },
       {
         title: "For Creators",
         items: [
           { icon: "edit_note", label: "Blogging Agent",      sub: "Auto-publish articles",           path: "/studio/blogging-agent",  auth: true },
-          { icon: "videocam",  label: "Video Editor",        sub: "AI-powered video production",     path: "/studio/video-editor",    auth: true },
           { icon: "bar_chart", label: "Earnings Dashboard",  sub: "Track API revenue on-chain",      path: "/creator",               auth: true, creatorOnly: true },
         ],
       },
@@ -55,13 +54,13 @@ const menus = {
       {
         title: "Docs & Guides",
         items: [
-          { icon: "menu_book", label: "x402 Protocol Docs",  sub: "Full API reference",              path: "/docs/x402",    auth: true },
-          { icon: "science",   label: "Live Playground",     sub: "Test live x402 transactions",     path: "/docs/x402",    auth: true },
-          { icon: "terminal",  label: "Code Examples",       sub: "cURL, JS, Python snippets",       path: "/docs/x402",    auth: true },
+          { icon: "menu_book", label: "x402 Protocol Docs",  sub: "Full API reference",              path: "/docs/x402" },
+          { icon: "science",   label: "Live Playground",     sub: "Test live x402 transactions",     path: "/x402-test" },
+          { icon: "terminal",  label: "Code Examples",       sub: "cURL, JS, Python snippets",       path: "/docs/x402-api" },
         ],
       },
     ],
-    cta: { label: "Open x402 Playground →", path: "/docs/x402", auth: true },
+    cta: { label: "Open x402 Playground →", path: "/x402-test" },
   },
 };
 
@@ -146,11 +145,46 @@ function DropdownPanel({ data, open, onNavigate, onMouseEnter, onMouseLeave, isA
 }
 
 /* ─── Main MegaNav ───────────────────────────────────────────────── */
+function collectMobileLinks() {
+  const links = [];
+  Object.entries(menus).forEach(([menuName, data]) => {
+    data.sections.forEach((sec) => {
+      sec.items.forEach((item) => {
+        links.push({ ...item, menuName, section: sec.title });
+      });
+    });
+  });
+  links.push({
+    label: "How It Works",
+    sub: "Pay-per-use AI on Algorand",
+    path: "/docs/how-it-works",
+    icon: "help",
+  });
+  return links;
+}
+
 export default function MegaNav({ enterWithPera }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isAuthenticated, user } = useAuth();
   const [openMenu, setOpenMenu] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const closeTimer = useRef(null);
+
+  // Scroll listener for premium header dynamic classes
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 15);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
 
   const keepOpen = (key) => {
     clearTimeout(closeTimer.current);
@@ -164,6 +198,7 @@ export default function MegaNav({ enterWithPera }) {
   /** Handle item click — gate auth-required routes */
   const handleItemClick = (item) => {
     setOpenMenu(null);
+    setMobileOpen(false);
 
     // scroll target
     if (item.scroll) {
@@ -185,6 +220,7 @@ export default function MegaNav({ enterWithPera }) {
   };
 
   const handleConnectWallet = () => {
+    setMobileOpen(false);
     if (isAuthenticated) {
       navigate("/dashboard/home");
     } else {
@@ -192,8 +228,17 @@ export default function MegaNav({ enterWithPera }) {
     }
   };
 
+  /* ─── All mobile nav items flattened ─── */
+  const mobileLinks = Object.entries(menus).flatMap(([, data]) =>
+    data.sections.flatMap((sec) => sec.items)
+  );
+
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-100 shadow-sm">
+    <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      scrolled
+        ? "bg-white/80 backdrop-blur-md border-b border-slate-200/50 shadow-md py-0.5"
+        : "bg-white/50 backdrop-blur-sm border-b border-slate-100/30 shadow-sm py-1.5"
+    }`}>
       <div className="max-w-screen-xl mx-auto px-6 h-14 flex items-center justify-between">
 
         {/* Left: logo + nav */}
@@ -260,7 +305,7 @@ export default function MegaNav({ enterWithPera }) {
           </nav>
         </div>
 
-        {/* Right: wallet + profile */}
+        {/* Right: wallet + profile + hamburger */}
         <div className="flex items-center gap-3">
           {isAuthenticated && user?.walletAddress && (
             <UserLiveWalletBar walletAddress={user.walletAddress} />
@@ -271,14 +316,89 @@ export default function MegaNav({ enterWithPera }) {
             <button
               type="button"
               onClick={handleConnectWallet}
-              className="flex items-center gap-2 px-4 py-1.5 bg-[#031634] text-white rounded-full text-sm font-semibold hover:bg-[#0a2855] active:scale-95 transition-all shadow-sm cursor-pointer"
+              className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-[#031634] text-white rounded-full text-sm font-semibold hover:bg-[#0a2855] active:scale-95 transition-all shadow-sm cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
               Connect Wallet
             </button>
           )}
+
+          {/* Hamburger button — mobile only */}
+          <button
+            type="button"
+            onClick={() => setMobileOpen((v) => !v)}
+            className="md:hidden flex items-center justify-center w-9 h-9 rounded-lg hover:bg-slate-100 transition-colors"
+            aria-label="Toggle mobile menu"
+          >
+            <span className="material-symbols-outlined text-[22px] text-slate-700">
+              {mobileOpen ? "close" : "menu"}
+            </span>
+          </button>
         </div>
       </div>
+
+      {/* ─── Mobile slide-out menu ─── */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 top-14 z-40 bg-white overflow-y-auto animate-in slide-in-from-top-2">
+          <nav className="px-6 py-6 space-y-1">
+            {Object.entries(menus).map(([key, data]) => (
+              <div key={key} className="mb-4">
+                <p className="text-[10px] font-bold tracking-[0.12em] text-slate-400 uppercase mb-2">
+                  {key}
+                </p>
+                {data.sections.map((sec) =>
+                  sec.items.map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => handleItemClick(item)}
+                      className="flex items-center gap-3 w-full px-3 py-3 rounded-xl hover:bg-slate-50 transition-colors text-left"
+                    >
+                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex-shrink-0">
+                        <span className="material-symbols-outlined text-[16px]">{item.icon}</span>
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-semibold text-slate-800">{item.label}</span>
+                        <p className="text-xs text-slate-400 truncate">{item.sub}</p>
+                      </div>
+                      {item.badge && (
+                        <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-indigo-500 text-white uppercase">
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            ))}
+
+            <Link
+              to="/docs/how-it-works"
+              onClick={() => setMobileOpen(false)}
+              className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-slate-50 transition-colors"
+            >
+              <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 text-slate-600 flex-shrink-0">
+                <span className="material-symbols-outlined text-[16px]">info</span>
+              </span>
+              <span className="text-sm font-semibold text-slate-800">How It Works</span>
+            </Link>
+
+            {!isAuthenticated && (
+              <div className="pt-4 border-t border-slate-100 mt-4">
+                <button
+                  type="button"
+                  onClick={handleConnectWallet}
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#031634] text-white rounded-xl text-sm font-semibold hover:bg-[#0a2855] active:scale-95 transition-all"
+                >
+                  <span className="material-symbols-outlined text-[16px]">account_balance_wallet</span>
+                  Connect Wallet
+                </button>
+              </div>
+            )}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
+

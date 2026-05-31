@@ -22,6 +22,8 @@ const serviceSchema = new mongoose.Schema(
     isSentinalOfficial: { type: Boolean, default: false },
     /** When true, service is available via the x402 keyless payment endpoint */
     x402Enabled: { type: Boolean, default: false },
+    averageRating: { type: Number, default: 0, min: 0, max: 5 },
+    reviewCount: { type: Number, default: 0, min: 0 },
   },
   { timestamps: { createdAt: true, updatedAt: true } }
 );

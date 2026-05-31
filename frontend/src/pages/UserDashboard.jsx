@@ -108,11 +108,11 @@ export default function UserDashboard() {
               <Link to="/dashboard/browse" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
                 Browse APIs
               </Link>
-              <Link to="/dashboard/featured" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
-                View Featured APIs
+              <Link to="/dashboard/creators" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
+                View Creators
               </Link>
-              <Link to="/dashboard/categories" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
-                Explore Categories
+              <Link to="/docs/how-it-works" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
+                How It Works
               </Link>
               <Link to="/dashboard/usage" className="border border-outline-variant rounded-md px-3 py-2 hover:bg-slate-50 transition-colors">
                 Open Usage Analytics
@@ -133,10 +133,6 @@ export default function UserDashboard() {
               <li className="flex justify-between">
                 <span>Recent API calls</span>
                 <span className="font-mono">{usage.length}</span>
-              </li>
-              <li className="flex justify-between">
-                <span>Estimated latency tier</span>
-                <span className="font-mono">P95 420ms</span>
               </li>
               <li className="flex justify-between">
                 <span>ALGO spent (recent)</span>
