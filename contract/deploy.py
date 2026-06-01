@@ -87,7 +87,8 @@ def _find_teal() -> tuple[Path | None, Path | None]:
 
 
 def main() -> None:
-    from algosdk import mnemonic, transaction
+    import base64
+    from algosdk import mnemonic, transaction, account
     from algosdk.v2client import algod
 
     if not _compile_puya():
@@ -115,14 +116,14 @@ def main() -> None:
         client = algod.AlgodClient(algod_token, algod_server)
         approval_result = client.compile(approval_teal)
         clear_result = client.compile(clear_teal)
-        approval_bytes = bytes.fromhex(approval_result["result"])
-        clear_bytes = bytes.fromhex(clear_result["result"])
+        approval_bytes = base64.b64decode(approval_result["result"])
+        clear_bytes = base64.b64decode(clear_result["result"])
 
         private_key = mnemonic.to_private_key(deploy_mnemonic)
-        sender = mnemonic.to_public_key(deploy_mnemonic)
+        sender = account.address_from_private_key(private_key)
         suggested = client.suggested_params()
 
-        create_sig = _arc4_selector("create_application(uint64)")
+        create_sig = _arc4_selector("create_application(uint64)void")
         app_args = [create_sig, min_micro.to_bytes(8, "big")]
 
         txn = transaction.ApplicationCreateTxn(
