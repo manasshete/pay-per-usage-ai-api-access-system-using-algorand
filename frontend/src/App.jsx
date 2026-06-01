@@ -7,6 +7,10 @@ import CreatorDashboard from "./pages/CreatorDashboard.jsx";
 import CreateService from "./pages/CreateService.jsx";
 import PredictionDashboard from "./pages/PredictionDashboard.jsx";
 import UserDashboard from "./pages/UserDashboard.jsx";
+import GatewayWallet from "./pages/GatewayWallet.jsx";
+import GatewayDeveloper from "./pages/GatewayDeveloper.jsx";
+import GatewayMarketplace from "./pages/GatewayMarketplace.jsx";
+import GatewayAdmin from "./pages/GatewayAdmin.jsx";
 import TransactionHistory from "./pages/TransactionHistory.jsx";
 import HostedApps from "./pages/HostedApps.jsx";
 import DevDashboard from "./pages/DevDashboard.jsx";
@@ -195,6 +199,8 @@ export default function App() {
         <Route path="categories" element={<Navigate to="/dashboard/browse" replace />} />
         <Route path="keys" element={<UserDashboard />} />
         <Route path="usage" element={<PredictionDashboard />} />
+        <Route path="gateway" element={<GatewayWallet />} />
+        <Route path="gateway-marketplace" element={<GatewayMarketplace />} />
         <Route path="creators" element={<MarketplaceCreators />} />
         <Route path="creators/:walletAddress" element={<CreatorProfile />} />
         <Route
@@ -378,6 +384,22 @@ export default function App() {
         element={
           <Guard role="creator">
             <CreatorDashboard />
+          </Guard>
+        }
+      />
+      <Route
+        path="/creator/gateway"
+        element={
+          <Guard role="creator">
+            <GatewayDeveloper />
+          </Guard>
+        }
+      />
+      <Route
+        path="/creator/gateway-admin"
+        element={
+          <Guard role="creator">
+            <GatewayAdmin />
           </Guard>
         }
       />

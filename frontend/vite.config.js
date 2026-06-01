@@ -42,7 +42,7 @@ function manualChunks(id) {
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const proxyTarget = env.VITE_PROXY_TARGET?.trim() || "http://localhost:5001";
+  const proxyTarget = env.VITE_PROXY_TARGET?.trim() || "http://127.0.0.1:5000";
 
   return {
     css: {

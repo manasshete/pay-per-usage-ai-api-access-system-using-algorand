@@ -17,6 +17,12 @@ const userSchema = new mongoose.Schema(
     monthlyBlogsUsed: { type: Number, default: 0 },
     monthlyPromptsUsed: { type: Number, default: 0 },
     usageResetAt: { type: Date },
+    /** v2 gateway: prepaid balance in USD cents */
+    walletBalanceCents: { type: Number, default: 0, min: 0 },
+    /** v2 gateway: master key for POST /proxy/:slug */
+    sentinelApiKey: { type: String, unique: true, sparse: true },
+    /** Registered Algorand address (alias for walletAddress when set) */
+    algoAddress: { type: String, trim: true, sparse: true },
   },
   { timestamps: { createdAt: true, updatedAt: true } }
 );

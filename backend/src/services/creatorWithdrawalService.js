@@ -3,6 +3,10 @@ import { ApiUsageLog } from "../models/ApiUsageLog.js";
 import { Service } from "../models/Service.js";
 import { Withdrawal } from "../models/Withdrawal.js";
 import { algoToMicroAlgos, fetchAccountBalanceMicroAlgos } from "./algorandService.js";
+import {
+  getPlatformTreasuryKey,
+  treasuryConfigError,
+} from "./platformTreasuryKey.js";
 import { canonicalWalletAddress, creatorServicesOwnedBy } from "../utils/userWallet.js";
 
 export const MIN_WITHDRAWAL_ALGO = 0.1;
@@ -23,14 +27,6 @@ function getAlgodClient() {
   ).replace(/\/$/, "");
   const token = process.env.ALGOD_TOKEN || "";
   return new algosdk.Algodv2(token, server, "");
-}
-
-function getPlatformTreasuryKey() {
-  const mn = process.env.PLATFORM_MNEMONIC?.trim();
-  if (!mn) {
-    throw new Error("Platform treasury is not configured (PLATFORM_MNEMONIC missing)");
-  }
-  return algosdk.mnemonicToSecretKey(mn);
 }
 
 async function getCreatorServiceIds(creatorWallet) {
@@ -80,7 +76,8 @@ export async function computeCreatorWithdrawalBalances(creatorWallet) {
 }
 
 async function submitTreasuryPayout({ creatorWallet, amountAlgo, withdrawalId }) {
-  const { addr, sk } = getPlatformTreasuryKey();
+  const treasury = await getPlatformTreasuryKey();
+  const { addr } = treasury;
   const receiver = canonicalWalletAddress(creatorWallet);
   const microAlgos = algoToMicroAlgos(amountAlgo);
 
@@ -102,7 +99,7 @@ async function submitTreasuryPayout({ creatorWallet, amountAlgo, withdrawalId })
     note,
     suggestedParams: sp,
   });
-  const signed = txn.signTxn(sk);
+  const signed = await treasury.signTransaction(txn);
   const { txId } = await client.sendRawTransaction(signed).do();
   await waitForConfirmation(client, txId, 6);
   return txId;
@@ -145,6 +142,9 @@ export async function requestCreatorWithdrawal({ creatorWallet, userId, amountAl
       balances,
     });
   }
+
+  // Fail fast before creating a pending row if treasury cannot sign payouts.
+  await getPlatformTreasuryKey();
 
   const withdrawal = await Withdrawal.create({
     creatorWallet: wallet,

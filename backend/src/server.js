@@ -1,5 +1,6 @@
-// Trigger reload to restart backend
+// Trigger reload to restart backend - port 5000
 import "./loadEnv.js";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -23,7 +24,11 @@ import devRoutes from "./routes/dev.js";
 import studioRoutes from "./routes/studio.routes.js";
 import x402Routes from "./routes/x402.js";
 import reviewsRoutes from "./routes/reviews.js";
+import proxyRoutes from "./routes/proxy.js";
+import gatewayRoutes from "./routes/gateway.js";
 import { startPublishingWorker } from "./workers/publishingWorker.js";
+import { startGatewayWorker } from "./workers/gatewayWorker.js";
+import { startGatewayScheduler } from "./services/gatewayScheduler.js";
 import { startScheduledPublishScheduler } from "./services/scheduledPublishScheduler.js";
 import { loadClipCraftConfig } from "./studio/clipcraft/config/loadConfig.js";
 import { getClipCraftRuntime } from "./studio/clipcraft/production/ClipCraftRuntime.js";
@@ -83,6 +88,8 @@ app.use("/api/dev", devRoutes);
 app.use("/api/studio", studioRoutes);
 app.use("/api/x402", x402Routes);
 app.use("/api/reviews", reviewsRoutes);
+app.use("/api/gateway", gatewayRoutes);
+app.use("/proxy/:slug", proxyRoutes);
 
 app.get("/x402-test", (req, res) => {
   res.sendFile(path.join(__dirname, "..", "..", "frontend", "x402-test.html"));
@@ -99,33 +106,54 @@ app.use("/outputs/workflow", express.static(workflowOutputDir));
 
 if (process.env.NODE_ENV === "production") {
   const dist = path.join(__dirname, "..", "..", "frontend", "dist");
+  const indexHtml = path.join(dist, "index.html");
 
-  /** Hashed Vite assets — long cache; missing files must not fall through to SPA HTML. */
-  const isStaticAsset = (p) => /\.(js|mjs|css|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot)$/i.test(p);
-
-  app.use(
-    express.static(dist, {
-      index: false,
-      setHeaders(res, filePath) {
-        if (filePath.replace(/\\/g, "/").endsWith("/index.html")) {
-          res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-        } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
-          res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-        }
-      },
-    })
-  );
-
-  app.get("*", (req, res, next) => {
-    if (req.path.startsWith("/api")) return next();
-    if (isStaticAsset(req.path)) {
-      return res.status(404).type("text/plain").send("Asset not found");
-    }
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-    res.sendFile(path.join(dist, "index.html"), (err) => {
-      if (err) next(err);
+  if (!fs.existsSync(indexHtml)) {
+    console.warn(
+      "[server] frontend/dist/index.html missing — running API-only. " +
+        "On Render, set buildCommand to `npm run build` from the repo root (not backend/)."
+    );
+    app.get("/", (_req, res) => {
+      res.status(200).json({
+        ok: true,
+        message: "Sentinel API. Frontend bundle not built on this service.",
+        health: "/api/health",
+      });
     });
-  });
+  } else {
+    /** Hashed Vite assets — long cache; missing files must not fall through to SPA HTML. */
+    const isStaticAsset = (p) =>
+      /\.(js|mjs|css|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|eot)$/i.test(p);
+
+    app.use(
+      express.static(dist, {
+        index: false,
+        setHeaders(res, filePath) {
+          if (filePath.replace(/\\/g, "/").endsWith("/index.html")) {
+            res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+          } else if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          }
+        },
+      })
+    );
+
+    app.get("*", (req, res, next) => {
+      if (req.path.startsWith("/api")) return next();
+      if (isStaticAsset(req.path)) {
+        return res.status(404).type("text/plain").send("Asset not found");
+      }
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      res.sendFile(indexHtml, (err) => {
+        if (err) {
+          if (err.code === "ENOENT") {
+            return res.status(503).json({ error: "Frontend bundle unavailable" });
+          }
+          return next(err);
+        }
+      });
+    });
+  }
 }
 
 app.use((err, _req, res, _next) => {
@@ -150,6 +178,16 @@ connectDb()
       startPublishingWorker();
     } catch (e) {
       console.warn("[publishingWorker] failed to start:", e.message);
+    }
+    try {
+      startGatewayWorker();
+    } catch (e) {
+      console.warn("[gatewayWorker] failed to start:", e.message);
+    }
+    try {
+      startGatewayScheduler();
+    } catch (e) {
+      console.warn("[gatewayScheduler] failed to start:", e.message);
     }
     try {
       startScheduledPublishScheduler();

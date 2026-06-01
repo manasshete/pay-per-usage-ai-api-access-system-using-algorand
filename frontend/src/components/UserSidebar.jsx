@@ -19,6 +19,8 @@ export default function UserSidebar({ activeTab }) {
         { label: "My API Keys", path: "/dashboard/keys" },
         { label: "Creators", path: "/dashboard/creators" },
         { label: "Usage", path: "/dashboard/usage" },
+        { label: "Gateway Wallet", path: "/dashboard/gateway" },
+        { label: "API Marketplace", path: "/dashboard/gateway-marketplace" },
         { label: "Transactions", path: "/billing/transactions" },
         { label: "x402 Docs", path: "/docs/x402" },
       ],
