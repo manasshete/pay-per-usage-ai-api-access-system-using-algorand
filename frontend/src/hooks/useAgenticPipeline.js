@@ -28,6 +28,7 @@ export function useAgenticPipeline({ atCap = false } = {}) {
   const queryClient = useQueryClient();
   const [inputText, setInputText] = useState("");
   const [imageFile, setImageFile] = useState(null);
+  const [runType, setRunType] = useState("agentic_text");
   const [isRunning, setIsRunning] = useState(false);
   const [currentPhase, setCurrentPhase] = useState(0);
   const [phaseLabel, setPhaseLabel] = useState("");
@@ -45,10 +46,6 @@ export function useAgenticPipeline({ atCap = false } = {}) {
   }, []);
 
   const run = useCallback(() => {
-    if (atCap) {
-      toast.error("Monthly Studio AI limit reached.");
-      return;
-    }
     if (!inputText.trim()) {
       toast.error("Enter a prompt first.");
       return;
@@ -60,6 +57,7 @@ export function useAgenticPipeline({ atCap = false } = {}) {
     setError(null);
 
     streamPipelineRun(inputText, imageFile, {
+      runType,
       onProgress: (event) => {
         setCurrentPhase(event.phase || 0);
         setPhaseLabel(event.label || "");
@@ -76,18 +74,48 @@ export function useAgenticPipeline({ atCap = false } = {}) {
       },
       onError: (msg) => {
         const text = typeof msg === "string" ? msg : msg?.message || "Pipeline failed";
+        // Stream may close before the final SSE chunk — recover from Run History if possible.
+        if (text.includes("Stream ended before delivery finished")) {
+          fetchPipelineRuns()
+            .then((runs) => {
+              const latest = runs.find((r) => r.status === "completed" && r.inputText === inputText.trim());
+              if (latest) {
+                setResult(latest);
+                setIsRunning(false);
+                setCurrentPhase(7);
+                setPhaseLabel("Done");
+                queryClient.invalidateQueries({ queryKey: ["studio-usage"] });
+                playCompletionSound();
+                toast.success("Pipeline complete — recovered from run history", { duration: 5000 });
+                setHistory(runs);
+                window.dispatchEvent(new CustomEvent("agenticPipelineComplete"));
+                return;
+              }
+              setError(text);
+              setIsRunning(false);
+              toast.error(text);
+            })
+            .catch(() => {
+              setError(text);
+              setIsRunning(false);
+              toast.error(text);
+            });
+          return;
+        }
         setError(text);
         setIsRunning(false);
         toast.error(text);
       },
     });
-  }, [inputText, imageFile, atCap, loadHistory, queryClient]);
+  }, [inputText, imageFile, runType, loadHistory, queryClient]);
 
   return {
     inputText,
     setInputText,
     imageFile,
     setImageFile,
+    runType,
+    setRunType,
     isRunning,
     currentPhase,
     phaseLabel,

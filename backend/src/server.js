@@ -34,6 +34,7 @@ import { loadClipCraftConfig } from "./studio/clipcraft/config/loadConfig.js";
 import { getClipCraftRuntime } from "./studio/clipcraft/production/ClipCraftRuntime.js";
 import { registerClipCraftGracefulShutdown } from "./studio/clipcraft/production/gracefulShutdown.js";
 import { buildCorsOrigins, isCorsOriginAllowed } from "./config/corsOrigins.js";
+import { getPublicReceiverWallet } from "./config/paymentConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +59,14 @@ app.use(
       }
     },
     credentials: true,
+    exposedHeaders: ["Payment-Required", "X-Payment-Response"],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Payment",
+      "x-payment",
+      "X-Payment-Response",
+    ],
   })
 );
 app.use(express.json({ limit: "1mb" }));
@@ -70,6 +79,8 @@ app.get("/api/public/network", (_req, res) => {
       process.env.ALGOD_SERVER ||
       process.env.ALGORAND_NODE ||
       "https://testnet-api.algonode.cloud",
+    network: process.env.ALGO_NETWORK?.trim() || "testnet",
+    receiverWallet: getPublicReceiverWallet(),
   });
 });
 

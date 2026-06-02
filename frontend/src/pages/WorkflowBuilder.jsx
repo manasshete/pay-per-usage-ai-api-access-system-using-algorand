@@ -46,11 +46,16 @@ function BuilderInner() {
   useWorkflowPersistence();
 
   const hasRunData = Boolean(
-    currentRun?.status ||
-      (currentRun?.nodeResults?.length || 0) > 0 ||
+    currentRun?.structuredResult ||
+      currentRun?.nodeResults?.some((nr) => nr.output || nr.status === "completed" || nr.status === "success") ||
       (currentRun?.logs?.length || 0) > 0 ||
-      liveLogs.length > 0
+      liveLogs.length > 0 ||
+      (currentRun?.status && !["pending"].includes(currentRun.status))
   );
+
+  const openResultsPanel = useCallback(() => {
+    setPanelOpen(true);
+  }, []);
 
   useEffect(() => {
     const openPanel = () => setPanelOpen(true);
@@ -169,7 +174,7 @@ function BuilderInner() {
         name={name}
         onNameChange={setName}
         onSave={() => saveWorkflow().then(() => toast.success("Saved"))}
-        onOpenResults={() => setPanelOpen(true)}
+        onOpenResults={openResultsPanel}
         hasRunData={hasRunData}
         resultsPanelOpen={panelOpen}
         onRun={() => {
@@ -177,7 +182,7 @@ function BuilderInner() {
             toast.error("Add at least one node before running");
             return;
           }
-          setPanelOpen(true);
+          openResultsPanel();
           runWorkflow();
         }}
         isSaving={isSaving}
@@ -449,31 +454,29 @@ function BuilderInner() {
           />
         </div>
 
-        <div onClick={(e) => e.stopPropagation()}>
-          <ExecutionPanel
-            run={currentRun}
-            isOpen={panelOpen}
-            onClose={() => setPanelOpen(false)}
-            liveLogs={liveLogs}
-            onRerun={() => {
-              setPanelOpen(true);
-              runWorkflow();
-            }}
-            onOpenBlog={(postId) => {
-              navigate("/studio/blogging-agent", { state: { postId } });
-            }}
-            nodeMeta={Object.fromEntries(
-              nodes.map((n) => [n.id, { label: n.data?.label, type: n.type }])
-            )}
-          />
-        </div>
+        <ExecutionPanel
+          run={currentRun}
+          isOpen={panelOpen}
+          onClose={() => setPanelOpen(false)}
+          liveLogs={liveLogs}
+          onRerun={() => {
+            openResultsPanel();
+            runWorkflow();
+          }}
+          onOpenBlog={(postId) => {
+            navigate("/studio/blogging-agent", { state: { postId } });
+          }}
+          nodeMeta={Object.fromEntries(
+            nodes.map((n) => [n.id, { label: n.data?.label, type: n.type }])
+          )}
+        />
       </div>
 
       {!panelOpen && (
         <ExecutionPanelTab
           run={currentRun}
           isRunning={isRunning}
-          onOpen={() => setPanelOpen(true)}
+          onOpen={openResultsPanel}
         />
       )}
     </div>

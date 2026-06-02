@@ -2,7 +2,9 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import sanitizeHtml from "sanitize-html";
 import { requireAuth } from "../middleware/auth.js";
-import { attachWorkflowOwner, workflowPaymentGate } from "../middleware/workflowAuth.js";
+import { attachWorkflowOwner } from "../middleware/workflowAuth.js";
+import { checkStudioCredits } from "../middleware/studioQuota.js";
+import { conditionalX402Gate } from "../middleware/x402OverageGate.js";
 import { Workflow } from "../models/Workflow.js";
 import { WorkflowRun } from "../models/WorkflowRun.js";
 import { AgentTemplate } from "../models/AgentTemplate.js";
@@ -772,6 +774,380 @@ const DEFAULT_TEMPLATES = [
       ],
     },
   },
+  {
+    name: "Creative: Brand Identity Pack",
+    category: "Creative",
+    description:
+      "Brand brief → Gemini prompt engineering → 4 mood images → tagline & voice guidelines via Groq.",
+    tags: ["brand", "identity", "creative", "moodboard"],
+    estimatedCreditsPerRun: 0.022,
+    isFeatured: true,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "bi_in",
+          type: "input",
+          position: { x: 40, y: 220 },
+          data: {
+            label: "Brand brief",
+            inputType: "text",
+            value:
+              "A pay-per-use AI API marketplace called Sentinel — trustworthy, developer-first, Algorand-native. Navy + teal palette.",
+            config: {},
+          },
+        },
+        {
+          id: "bi_prompt",
+          type: "promptGen",
+          position: { x: 260, y: 220 },
+          data: {
+            label: "Visual direction",
+            category: "Brand / Identity",
+            mode: "advanced",
+            extraInstructions: "4 distinct visual directions: hero, UI mockup, abstract, lifestyle. 16:9 each.",
+            estimatedCredits: 0.004,
+            config: {},
+          },
+        },
+        {
+          id: "bi_image",
+          type: "imageGen",
+          position: { x: 480, y: 220 },
+          data: { label: "Mood images", aspectRatio: "16:9", estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "bi_voice",
+          type: "ai",
+          position: { x: 700, y: 220 },
+          data: {
+            label: "Brand voice",
+            model: "llama-3.3-70b-versatile",
+            systemPrompt:
+              "From the brand brief, write: 5 tagline options, tone-of-voice guidelines (do/don't), and 3 sample microcopy snippets for a developer landing page.",
+            outputFormat: "summary",
+            maxTokens: 1024,
+            estimatedCredits: 0.004,
+            config: {},
+          },
+        },
+        {
+          id: "bi_out",
+          type: "output",
+          position: { x: 920, y: 220 },
+          data: { label: "Brand pack", outputType: "structured", outputFormat: "summary", config: {} },
+        },
+      ],
+      edges: [
+        { id: "bi_e1", source: "bi_in", target: "bi_prompt", animated: true },
+        { id: "bi_e2", source: "bi_prompt", target: "bi_image", animated: true },
+        { id: "bi_e3", source: "bi_image", target: "bi_voice", animated: true },
+        { id: "bi_e4", source: "bi_voice", target: "bi_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Creative: Instagram Carousel",
+    category: "Creative",
+    description: "Topic → 5 slide copy → Gemini generates one visual per slide (1:1 square).",
+    tags: ["instagram", "carousel", "social", "creative"],
+    estimatedCreditsPerRun: 0.018,
+    isFeatured: true,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "ig_in",
+          type: "input",
+          position: { x: 40, y: 240 },
+          data: {
+            label: "Carousel topic",
+            inputType: "text",
+            value: "5 reasons pay-per-use beats monthly AI subscriptions for indie hackers",
+            config: {},
+          },
+        },
+        {
+          id: "ig_copy",
+          type: "ai",
+          position: { x: 280, y: 240 },
+          data: {
+            label: "Slide copy",
+            model: "llama-3.3-70b-versatile",
+            systemPrompt:
+              "Write exactly 5 Instagram carousel slides. Each slide: bold headline (max 8 words) + 1 supporting sentence. Slide 1 = hook, slide 5 = CTA. Number each slide.",
+            outputFormat: "summary",
+            maxTokens: 768,
+            estimatedCredits: 0.004,
+            config: {},
+          },
+        },
+        {
+          id: "ig_prompt",
+          type: "promptGen",
+          position: { x: 520, y: 240 },
+          data: {
+            label: "Visual prompts",
+            category: "Social Media",
+            mode: "advanced",
+            extraInstructions: "One bold 1:1 square graphic prompt per slide. High contrast, minimal text overlay space.",
+            estimatedCredits: 0.004,
+            config: {},
+          },
+        },
+        {
+          id: "ig_image",
+          type: "imageGen",
+          position: { x: 760, y: 240 },
+          data: { label: "Slide visuals", aspectRatio: "1:1", estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "ig_out",
+          type: "output",
+          position: { x: 980, y: 240 },
+          data: { label: "Carousel pack", outputType: "structured", outputFormat: "summary", config: {} },
+        },
+      ],
+      edges: [
+        { id: "ig_e1", source: "ig_in", target: "ig_copy", animated: true },
+        { id: "ig_e2", source: "ig_copy", target: "ig_prompt", animated: true },
+        { id: "ig_e3", source: "ig_prompt", target: "ig_image", animated: true },
+        { id: "ig_e4", source: "ig_image", target: "ig_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Agentic: SaaS Explainer Video",
+    category: "Agentic",
+    description:
+      "Product brief → script → 3 UI mockup keyframes → Veo motion → professional voiceover. Perfect for landing pages.",
+    tags: ["agentic", "saas", "explainer", "video", "voiceover"],
+    estimatedCreditsPerRun: 0.086,
+    isFeatured: true,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "sx_in",
+          type: "input",
+          position: { x: 40, y: 240 },
+          data: {
+            label: "Product brief",
+            inputType: "text",
+            value:
+              "Explain Sentinel — a pay-per-use AI API gateway on Algorand. Show: connect wallet, pick an API, pay per call, get on-chain receipt. 40 seconds, professional tone.",
+            config: {},
+          },
+        },
+        {
+          id: "sx_text",
+          type: "agenticText",
+          position: { x: 240, y: 240 },
+          data: { label: "Agentic · Text", estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "sx_image",
+          type: "agenticImage",
+          position: { x: 440, y: 240 },
+          data: { label: "Agentic · Image", imageCount: 3, estimatedCredits: 0.018, config: {} },
+        },
+        {
+          id: "sx_video",
+          type: "agenticVideo",
+          position: { x: 640, y: 240 },
+          data: { label: "Agentic · Video", estimatedCredits: 0.05, config: {} },
+        },
+        {
+          id: "sx_audio",
+          type: "agenticAudio",
+          position: { x: 840, y: 240 },
+          data: { label: "Agentic · Audio", estimatedCredits: 0.01, config: {} },
+        },
+        {
+          id: "sx_out",
+          type: "output",
+          position: { x: 1040, y: 240 },
+          data: { label: "Explainer pack", outputType: "structured", outputFormat: "summary", config: {} },
+        },
+      ],
+      edges: [
+        { id: "sx_e1", source: "sx_in", target: "sx_text", animated: true },
+        { id: "sx_e2", source: "sx_text", target: "sx_image", animated: true },
+        { id: "sx_e3", source: "sx_image", target: "sx_video", animated: true },
+        { id: "sx_e4", source: "sx_video", target: "sx_audio", animated: true },
+        { id: "sx_e5", source: "sx_audio", target: "sx_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Creative: Product Demo Storyboard",
+    category: "Creative",
+    description: "Feature list → scene breakdown → 6 storyboard frames for a product demo video.",
+    tags: ["storyboard", "product", "demo", "creative"],
+    estimatedCreditsPerRun: 0.016,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "sb_in",
+          type: "input",
+          position: { x: 60, y: 220 },
+          data: {
+            label: "Feature list",
+            inputType: "text",
+            value:
+              "Protected proxy layer, automated micropayments, usage dashboard, no vendor lock-in, on-chain receipts",
+            config: {},
+          },
+        },
+        {
+          id: "sb_scenes",
+          type: "ai",
+          position: { x: 300, y: 220 },
+          data: {
+            label: "Scene breakdown",
+            model: "llama-3.3-70b-versatile",
+            systemPrompt:
+              "Turn the feature list into a 6-scene product demo storyboard. Each scene: scene number, on-screen action, narration line, duration (seconds). Total ~60s.",
+            outputFormat: "summary",
+            maxTokens: 1024,
+            estimatedCredits: 0.004,
+            config: {},
+          },
+        },
+        {
+          id: "sb_prompt",
+          type: "promptGen",
+          position: { x: 540, y: 220 },
+          data: {
+            label: "Frame prompts",
+            category: "Storyboard",
+            mode: "advanced",
+            extraInstructions: "One cinematic 16:9 frame per scene. UI/product shots where relevant.",
+            estimatedCredits: 0.004,
+            config: {},
+          },
+        },
+        {
+          id: "sb_image",
+          type: "imageGen",
+          position: { x: 780, y: 220 },
+          data: { label: "Storyboard frames", aspectRatio: "16:9", estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "sb_out",
+          type: "output",
+          position: { x: 1000, y: 220 },
+          data: { label: "Storyboard", outputType: "structured", outputFormat: "summary", config: {} },
+        },
+      ],
+      edges: [
+        { id: "sb_e1", source: "sb_in", target: "sb_scenes", animated: true },
+        { id: "sb_e2", source: "sb_scenes", target: "sb_prompt", animated: true },
+        { id: "sb_e3", source: "sb_prompt", target: "sb_image", animated: true },
+        { id: "sb_e4", source: "sb_image", target: "sb_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Marketing: Competitive Battlecard",
+    category: "Research",
+    description: "Paste competitor weaknesses → structured battlecard with talk tracks and objection handlers.",
+    tags: ["sales", "competitive", "battlecard", "research"],
+    estimatedCreditsPerRun: 0.008,
+    isFeatured: true,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "bc_in",
+          type: "input",
+          position: { x: 80, y: 220 },
+          data: {
+            label: "Competitor intel",
+            inputType: "text",
+            value:
+              "Competitor weaknesses: no on-chain payments, monthly lock-in, no usage analytics, complex billing, no proxy layer. Our strengths: pay-per-use, Algorand micropayments, transparent dashboard.",
+            config: {},
+          },
+        },
+        {
+          id: "bc_ai",
+          type: "ai",
+          position: { x: 400, y: 220 },
+          data: {
+            label: "Battlecard writer",
+            model: "llama-3.3-70b-versatile",
+            systemPrompt:
+              "Create a sales battlecard: Overview, Our wins (table), Their weaknesses, 5 talk tracks, 5 objection handlers, elevator pitch (30s). Markdown format.",
+            outputFormat: "report",
+            maxTokens: 2048,
+            temperature: 0.4,
+            estimatedCredits: 0.006,
+            config: {},
+          },
+        },
+        {
+          id: "bc_out",
+          type: "output",
+          position: { x: 720, y: 220 },
+          data: { label: "Battlecard", outputType: "structured", outputFormat: "report", config: {} },
+        },
+      ],
+      edges: [
+        { id: "bc_e1", source: "bc_in", target: "bc_ai", animated: true },
+        { id: "bc_e2", source: "bc_ai", target: "bc_out", animated: true },
+      ],
+    },
+  },
+  {
+    name: "Agentic: Lo-Fi Product Loop",
+    category: "Agentic",
+    description: "Minimal brief → 2 aesthetic keyframes → short looping Veo clip for website backgrounds.",
+    tags: ["agentic", "loop", "website", "ambient"],
+    estimatedCreditsPerRun: 0.068,
+    nodeStructure: {
+      nodes: [
+        {
+          id: "lf_in",
+          type: "input",
+          position: { x: 60, y: 220 },
+          data: {
+            label: "Loop brief",
+            inputType: "text",
+            value:
+              "Seamless looping background: abstract data streams flowing into a glowing wallet icon, dark navy gradient, subtle particle effects, calm and premium",
+            config: {},
+          },
+        },
+        {
+          id: "lf_text",
+          type: "agenticText",
+          position: { x: 300, y: 220 },
+          data: { label: "Agentic · Text", estimatedCredits: 0.008, config: {} },
+        },
+        {
+          id: "lf_image",
+          type: "agenticImage",
+          position: { x: 540, y: 220 },
+          data: { label: "Agentic · Image", imageCount: 2, estimatedCredits: 0.012, config: {} },
+        },
+        {
+          id: "lf_video",
+          type: "agenticVideo",
+          position: { x: 780, y: 220 },
+          data: { label: "Agentic · Video", estimatedCredits: 0.05, config: {} },
+        },
+        {
+          id: "lf_out",
+          type: "output",
+          position: { x: 1000, y: 220 },
+          data: { label: "Loop clip", outputType: "structured", outputFormat: "summary", config: {} },
+        },
+      ],
+      edges: [
+        { id: "lf_e1", source: "lf_in", target: "lf_text", animated: true },
+        { id: "lf_e2", source: "lf_text", target: "lf_image", animated: true },
+        { id: "lf_e3", source: "lf_image", target: "lf_video", animated: true },
+        { id: "lf_e4", source: "lf_video", target: "lf_out", animated: true },
+      ],
+    },
+  },
 ];
 
 async function ensureTemplates() {
@@ -878,7 +1254,8 @@ router.post(
   "/:id/run",
   runLimiter,
   attachWorkflowOwner,
-  workflowPaymentGate,
+  checkStudioCredits(),
+  conditionalX402Gate,
   async (req, res) => {
     const validation = validateDAG(req.workflow.nodes, req.workflow.edges);
     if (!validation.valid) {
@@ -894,39 +1271,17 @@ router.post(
       }
     }
 
-    if (!req.body?.paymentProof) {
-      const challenge = createPaymentChallenge(
-        req.user.userId,
-        req.workflow._id,
-        "pending",
-        estimatedCredits
-      );
-      return res.status(402).json({
-        success: false,
-        error: "Insufficient balance or payment required",
-        paymentRequired: challenge,
-        estimatedCredits,
-      });
-    }
-
-    const verified = await verifyAndCharge({
-      paymentProof: req.body.paymentProof,
-      challenge: createPaymentChallenge(req.user.userId, req.workflow._id, "run", estimatedCredits),
-      estimatedCredits,
-    });
-    if (!verified.success) {
-      return res.status(402).json({ success: false, error: verified.error || "Payment failed" });
-    }
-
     const run = await WorkflowRun.create({
       workflowId: req.workflow._id,
       userId: req.user.userId,
       status: "pending",
       estimatedCredits,
       walletAddress: req.user.walletAddress,
-      txHash: verified.txHash,
+      txHash: req.overageTxId || null,
       triggeredBy: req.body?.triggeredBy || "manual",
       idempotencyKey: idempotencyKey || undefined,
+      runType: req.studioRunType,
+      paidVia: req.creditDeducted ? "credits" : req.overagePaid ? "x402_overage" : "unknown",
     });
 
     setImmediate(() => {
@@ -937,7 +1292,13 @@ router.post(
 
     res.status(202).json({
       success: true,
-      data: { runId: run._id, estimatedCredits, streamUrl: `/api/studio/workflow-runs/${run._id}/stream` },
+      data: {
+        runId: run._id,
+        estimatedCredits,
+        runType: req.studioRunType,
+        creditsRemaining: req.creditsRemaining,
+        streamUrl: `/api/studio/workflow-runs/${run._id}/stream`,
+      },
     });
   }
 );

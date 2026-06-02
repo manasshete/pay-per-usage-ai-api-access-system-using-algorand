@@ -83,7 +83,7 @@ export default function ExecutionPanel({
       /* ignore */
     }
   }
-  if (!mediaSrc(workflowAudio) && finalPayload?.final?.audio) {
+  if (!finalPayload?.final?.audioIntegrated && !mediaSrc(workflowAudio) && finalPayload?.final?.audio) {
     workflowAudio = finalPayload.final.audio;
   }
   if (!mediaSrc(workflowAudio) && finalPayload?.steps) {
@@ -97,13 +97,23 @@ export default function ExecutionPanel({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.aside
-          initial={{ x: 420 }}
-          animate={{ x: 0 }}
-          exit={{ x: 420 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className="w-[min(440px,42vw)] shrink-0 bg-white border-2 border-[#031634]/10 rounded-xl flex flex-col h-[calc(100vh-12rem)] min-h-[480px] shadow-lg overflow-hidden"
-        >
+        <>
+          <motion.button
+            type="button"
+            aria-label="Close results panel"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 top-14 z-40 bg-black/20 md:bg-transparent md:pointer-events-none"
+            onClick={onClose}
+          />
+          <motion.aside
+            initial={{ x: "100%" }}
+            animate={{ x: 0 }}
+            exit={{ x: "100%" }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            className="fixed right-0 top-14 bottom-0 z-50 w-[min(440px,92vw)] bg-white border-l-2 border-[#031634]/10 flex flex-col shadow-2xl overflow-hidden"
+          >
           <div
             className={`p-4 border-b flex items-center justify-between ${
               isComplete
@@ -258,7 +268,7 @@ export default function ExecutionPanel({
               </div>
             )}
 
-            {mediaSrc(workflowAudio) && (
+            {mediaSrc(workflowAudio) && !finalPayload?.final?.audioIntegrated && (
               <div className="rounded-xl border-2 border-violet-200 bg-violet-50/50 p-3">
                 <h4 className="text-xs font-bold text-primary flex items-center gap-1 mb-2">
                   <span className="material-symbols-outlined text-base">mic</span>
@@ -397,6 +407,7 @@ export default function ExecutionPanel({
             </button>
           </div>
         </motion.aside>
+        </>
       )}
     </AnimatePresence>
   );

@@ -1,9 +1,8 @@
 import { useCallback, useState } from "react";
 import toast from "react-hot-toast";
 import { api, getApiBase } from "../api/client.js";
+import { studioFetch } from "../api/studioFetch.js";
 import { WORKFLOW_API } from "../api/workflowApi.js";
-import { getBurnerBalance, sendBurnerPayment, getDefaultAlgodServer } from "../wallet/burner.js";
-import { useAuth } from "../context/AuthContext.jsx";
 import { useNodeExecution } from "../context/NodeExecutionContext.jsx";
 import { extractBlogResult } from "../utils/workflowBlog.js";
 import { playCompletionSound } from "../utils/completionSound.js";
@@ -59,15 +58,9 @@ export function useWorkflowExecutor(workflowId) {
   const [currentRun, setCurrentRun] = useState(null);
   const [liveLogs, setLiveLogs] = useState([]);
   const { setNodeStatuses, setRunId } = useNodeExecution();
-  const { burnerReady } = useAuth();
-  const algodServer = getDefaultAlgodServer();
 
   const runWorkflow = useCallback(async () => {
     if (!workflowId) return;
-    if (!burnerReady) {
-      toast.error("Burner wallet is still loading. Try again in a moment.");
-      return;
-    }
     setIsRunning(true);
     setLiveLogs([]);
     setNodeStatuses({});
@@ -75,54 +68,30 @@ export function useWorkflowExecutor(workflowId) {
 
     try {
       const { data: estRes } = await api.post(WORKFLOW_API.estimate(workflowId));
-      const estimatedCredits = estRes?.data?.estimatedCredits ?? 0.001;
       if (!estRes?.data?.valid) {
         toast.error(estRes?.data?.errors?.join("; ") || "Invalid workflow");
         return;
       }
 
-      const ok = window.confirm(
-        `This run will cost approximately ${estimatedCredits.toFixed(4)} ALGO from your burner wallet. Proceed?`
-      );
-      if (!ok) return;
-
-      const microBal = await getBurnerBalance(algodServer);
-      const microNeed = Math.max(1000, Math.ceil(estimatedCredits * 1_000_000));
-      if (microBal < microNeed) {
-        toast.error("Insufficient burner balance — fund it from the wallet bar above.");
-        return;
-      }
-
-      const recipient = estRes?.data?.recipient;
-      if (!recipient) {
-        toast.error("Platform treasury wallet not configured on server");
-        return;
-      }
-
-      let paymentProof;
-      try {
-        const payRes = await sendBurnerPayment({
-          to: recipient,
-          amountMicroAlgos: microNeed,
-          noteStr: `workflow:${workflowId}`,
-          algodServer,
-        });
-        paymentProof = payRes.txId;
-        window.dispatchEvent(new CustomEvent("walletBalanceUpdate"));
-      } catch (payErr) {
-        toast.error(payErr?.message || "Burner payment failed");
-        return;
-      }
-
-      const { data: runRes } = await api.post(WORKFLOW_API.run(workflowId), {
-        paymentProof,
-        idempotencyKey: `run_${Date.now()}`,
+      const runRes = await studioFetch(WORKFLOW_API.run(workflowId), {
+        method: "POST",
+        body: { idempotencyKey: `run_${Date.now()}` },
       });
+      const runJson = await runRes.json();
+      if (!runRes.ok) {
+        const msg =
+          runJson?.error ||
+          (runRes.status === 402
+            ? "Studio credits exhausted — approve the ALGO overage payment or upgrade your plan."
+            : "Run failed");
+        throw new Error(msg);
+      }
 
-      const runId = runRes?.data?.runId;
+      const runId = runJson?.data?.runId;
       if (!runId) throw new Error("No run id returned");
       activeRunId = runId;
       setRunId(runId);
+      window.dispatchEvent(new CustomEvent("studio-usage-changed"));
 
       setCurrentRun((prev) => ({ ...prev, _id: runId, status: "running" }));
 
@@ -187,7 +156,12 @@ export function useWorkflowExecutor(workflowId) {
         }
       }
     } catch (e) {
-      toast.error(e?.response?.data?.error || e.message || "Run failed");
+      const msg = e?.message || e?.response?.data?.error || "Run failed";
+      if (/cancelled|exhausted|Payment required|overage/i.test(msg)) {
+        toast.error(msg, { duration: 8000 });
+      } else {
+        toast.error(msg);
+      }
       if (activeRunId) {
         try {
           const { data: finalRun } = await api.get(WORKFLOW_API.runOne(activeRunId));
@@ -202,7 +176,7 @@ export function useWorkflowExecutor(workflowId) {
     } finally {
       setIsRunning(false);
     }
-  }, [workflowId, setNodeStatuses, setRunId, burnerReady, algodServer]);
+  }, [workflowId, setNodeStatuses, setRunId]);
 
   return { isRunning, currentRun, liveLogs, runWorkflow, setCurrentRun };
 }

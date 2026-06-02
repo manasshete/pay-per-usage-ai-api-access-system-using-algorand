@@ -215,7 +215,16 @@ export function buildStructuredRunResult({
   const outputNode = (nodeResults || []).find((r) => nodeMap?.[r.nodeId]?.type === "output");
   const aiNodes = steps.filter((s) => s.type === "ai");
   const imageNode = (nodeResults || []).find((r) => nodeMap?.[r.nodeId]?.type === "imageGen");
-  const agenticPriority = ["agenticVideo", "agenticAudio", "agenticImage", "agenticText"];
+  const integratedAudioNode = (nodeResults || []).find((r) => {
+    if (nodeMap?.[r.nodeId]?.type !== "agenticAudio") return false;
+    const live = payloadByNodeId[r.nodeId];
+    if (live?.audioIntegrated && live?.videoUri) return true;
+    const parsed = tryParseJson(r.output);
+    return Boolean(parsed?.audioIntegrated && parsed?.videoUri);
+  });
+  const agenticPriority = integratedAudioNode
+    ? ["agenticAudio", "agenticVideo", "agenticImage", "agenticText"]
+    : ["agenticVideo", "agenticAudio", "agenticImage", "agenticText"];
   let agenticNode = null;
   for (const t of agenticPriority) {
     const found = (nodeResults || []).find((r) => nodeMap?.[r.nodeId]?.type === t);

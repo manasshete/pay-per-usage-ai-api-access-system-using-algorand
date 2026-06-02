@@ -1,6 +1,5 @@
 import { runPipeline } from "../services/agenticOrchestrator.js";
 import { PipelineRun } from "../models/PipelineRun.js";
-import { incrementPromptUsage } from "../services/blog.service.js";
 
 export async function startRun(req, res) {
   const inputText = req.body?.inputText;
@@ -33,7 +32,6 @@ export async function startRun(req, res) {
       (progress) => sendEvent({ type: "progress", ...progress })
     );
     sendEvent({ type: "complete", runId: run._id.toString(), run });
-    await incrementPromptUsage(userId);
   } catch (err) {
     console.error("[agentic pipeline]", err);
     sendEvent({ type: "error", message: err.message || "Pipeline failed" });

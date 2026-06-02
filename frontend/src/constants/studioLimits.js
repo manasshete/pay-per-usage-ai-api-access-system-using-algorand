@@ -1,12 +1,9 @@
-/** Display limits — keep in sync with backend/src/constants/studioLimits.js */
-export const PROMPT_LIMITS_BY_TIER = {
-  free: 10,
-  creator: 200,
-  pro: null,
-  enterprise: null,
-};
+/** Display limits — credit pools from studioPlans.js */
+import { PLAN_CREDITS } from "./studioPlans.js";
 
-export function promptLimitLabel(tier) {
-  const n = PROMPT_LIMITS_BY_TIER[tier] ?? PROMPT_LIMITS_BY_TIER.free;
-  return n == null ? "Unlimited" : `${n} / month`;
+export const CREDITS_BY_TIER = PLAN_CREDITS;
+
+export function creditLimitLabel(tier) {
+  const n = PLAN_CREDITS[tier] ?? PLAN_CREDITS.free;
+  return `${n} credits / month`;
 }

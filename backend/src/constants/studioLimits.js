@@ -1,9 +1,23 @@
-/** Studio tier limits — blogs, projects, prompt generator (monthly). */
+/** Non-credit Studio limits — blogs and projects (from FEATURE_GATES). */
+import { FEATURE_GATES } from "./studioPlans.js";
+
 export const STUDIO_TIER_LIMITS = {
-  free: { blogsPerMonth: 3, maxProjects: 2, promptsPerMonth: 10 },
-  creator: { blogsPerMonth: 50, maxProjects: 10, promptsPerMonth: 200 },
-  pro: { blogsPerMonth: Infinity, maxProjects: Infinity, promptsPerMonth: Infinity },
-  enterprise: { blogsPerMonth: Infinity, maxProjects: Infinity, promptsPerMonth: Infinity },
+  free: {
+    blogsPerMonth: FEATURE_GATES.free.maxBlogs,
+    maxProjects: FEATURE_GATES.free.maxProjects,
+  },
+  creator: {
+    blogsPerMonth: FEATURE_GATES.creator.maxBlogs,
+    maxProjects: FEATURE_GATES.creator.maxProjects,
+  },
+  pro: {
+    blogsPerMonth: FEATURE_GATES.pro.maxBlogs,
+    maxProjects: FEATURE_GATES.pro.maxProjects,
+  },
+  enterprise: {
+    blogsPerMonth: FEATURE_GATES.enterprise.maxBlogs,
+    maxProjects: FEATURE_GATES.enterprise.maxProjects,
+  },
 };
 
 export function limitForTier(tier, key) {

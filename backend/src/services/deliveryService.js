@@ -6,6 +6,7 @@ import {
   publishAgenticPayloadToGcs,
   resolveGcsUri,
 } from "./gcsAssetService.js";
+import { muxVideoWithAudio } from "./mediaComposer.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_DIR =
@@ -39,6 +40,19 @@ function saveImagesLocal(b64Array, runId) {
       fs.writeFileSync(destPath, Buffer.from(b64, "base64"));
       return `/outputs/pipeline/${filename}`;
     });
+}
+
+function saveIntegratedVideoLocal(tmpPath, runId) {
+  if (!tmpPath || !fs.existsSync(tmpPath)) return null;
+  const filename = `video_integrated_${runId}.mp4`;
+  const destPath = path.join(OUTPUT_DIR, filename);
+  fs.copyFileSync(tmpPath, destPath);
+  try {
+    fs.unlinkSync(tmpPath);
+  } catch {
+    /* ignore */
+  }
+  return `/outputs/pipeline/${filename}`;
 }
 
 export async function deliver(run, outputs) {
@@ -115,6 +129,75 @@ export async function deliver(run, outputs) {
 
     deliveryPackage.results.push(entry);
     Object.assign(output, working);
+  }
+
+  const videoEntry = deliveryPackage.results.find((r) => r.agent === "video" && r.content);
+  const audioEntry = deliveryPackage.results.find((r) => r.agent === "audio" && r.content);
+  if (videoEntry && audioEntry) {
+    try {
+      const muxed = await Promise.race([
+        muxVideoWithAudio({
+          video: videoEntry.content,
+          audio: audioEntry.content,
+          label: "pipeline_agentic_video",
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Video/audio mux timed out")), 95_000)
+        ),
+      ]);
+      if (muxed.ok) {
+        let integratedUrl = null;
+        if (isGcsConfigured()) {
+          const payload = {
+            agent: "video",
+            kind: "agenticVideo",
+            content: videoEntry.content,
+            videoUri: videoEntry.content,
+            integratedVideo: { tempPath: muxed.path, mimeType: "video/mp4" },
+          };
+          await publishAgenticPayloadToGcs(payload, {
+            scope: "pipeline",
+            runId,
+            nodeId: "video",
+          });
+          integratedUrl = payload.videoUri;
+        } else {
+          integratedUrl = saveIntegratedVideoLocal(muxed.path, runId);
+        }
+        if (integratedUrl) {
+          videoEntry.content = integratedUrl;
+          videoEntry.meta = {
+            ...(videoEntry.meta || {}),
+            audioIntegrated: true,
+            audioUrl: audioEntry.content,
+          };
+          audioEntry.meta = {
+            ...(audioEntry.meta || {}),
+            integratedIntoVideo: true,
+          };
+          const videoOutput = outputs.find((o) => o.agent === "video");
+          if (videoOutput) {
+            videoOutput.content = integratedUrl;
+            videoOutput.meta = {
+              ...(videoOutput.meta || {}),
+              audioIntegrated: true,
+              audioUrl: audioEntry.content,
+            };
+          }
+          const audioOutput = outputs.find((o) => o.agent === "audio");
+          if (audioOutput) {
+            audioOutput.meta = {
+              ...(audioOutput.meta || {}),
+              integratedIntoVideo: true,
+            };
+          }
+        }
+      } else {
+        videoEntry.note = muxed.reason;
+      }
+    } catch (err) {
+      videoEntry.note = `Video generated, but audio integration failed: ${err.message}`;
+    }
   }
 
   const manifestPath = path.join(OUTPUT_DIR, `manifest_${runId}.json`);

@@ -9,6 +9,7 @@ import {
   generateSocialSnippets,
 } from "../providers/groqProvider.js";
 import { STUDIO_TIER_LIMITS } from "../constants/studioLimits.js";
+import { resetMonthlyCredits } from "../services/studioCredits.js";
 
 const TIER_LIMITS = STUDIO_TIER_LIMITS;
 
@@ -17,12 +18,25 @@ export async function ensureUsageMonth(userId) {
   if (!user) return null;
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  if (!user.usageResetAt || user.usageResetAt < startOfMonth) {
+
+  const cycleExpired = user.usageResetAt && user.usageResetAt < now;
+  const monthRollover = !user.usageResetAt || user.usageResetAt < startOfMonth;
+
+  if (cycleExpired || monthRollover) {
     user.monthlyBlogsUsed = 0;
     user.monthlyPromptsUsed = 0;
-    user.usageResetAt = startOfMonth;
+    if (monthRollover && !cycleExpired) {
+      user.usageResetAt = startOfMonth;
+    }
+    resetMonthlyCredits(user);
     await user.save();
   }
+
+  if (user.studioCredits == null) {
+    resetMonthlyCredits(user);
+    await user.save();
+  }
+
   return user;
 }
 

@@ -4,6 +4,7 @@ import { runImageAgent } from "./agents/imageAgent.js";
 import { runVideoAgent } from "./agents/videoAgent.js";
 import { runAudioAgent } from "./agents/audioAgent.js";
 import { runCodeAgent } from "./agents/codeAgent.js";
+import { muxVideoWithAudio } from "./mediaComposer.js";
 
 const EMPTY_MEMORY = { pastChunks: [], preferences: {} };
 
@@ -34,6 +35,8 @@ export function parseAgenticUpstream(upstream) {
   const chunks = String(upstream || "").split("\n\n").filter(Boolean);
   let lastText = null;
   let lastImage = null;
+  let lastVideo = null;
+  let lastAudio = null;
   let goal = "";
 
   for (const chunk of chunks) {
@@ -45,9 +48,11 @@ export function parseAgenticUpstream(upstream) {
     if (p.goal) goal = p.goal;
     if (p.agent === "text") lastText = p;
     if (p.agent === "image") lastImage = p;
+    if (p.agent === "video") lastVideo = p;
+    if (p.agent === "audio") lastAudio = p;
   }
 
-  return { goal, lastText, lastImage };
+  return { goal, lastText, lastImage, lastVideo, lastAudio };
 }
 
 function resolveGoal(node, upstream) {
@@ -201,9 +206,39 @@ export async function executeAgenticAudioNode(node, upstream) {
     audio = { mimeType: "audio/wav", tempPath: output.content };
   }
 
+  const { lastVideo } = parseAgenticUpstream(upstream);
+  let integratedVideo = null;
+  let videoUri = lastVideo?.videoUri || lastVideo?.content || null;
+  let muxWarning = null;
+  if (videoUri && audio) {
+    try {
+      const muxed = await muxVideoWithAudio({
+        video: videoUri,
+        audio,
+        label: "workflow_agentic_video",
+      });
+      if (muxed.ok) {
+        integratedVideo = { mimeType: muxed.mimeType, tempPath: muxed.path };
+        videoUri = muxed.path;
+      } else {
+        muxWarning = muxed.reason;
+      }
+    } catch (err) {
+      muxWarning = `Could not combine video and audio: ${err.message}`;
+    }
+  }
+
   const payload = buildPayload("agenticAudio", goal, output, {
     audio,
-    displayPreview: audio ? "Voiceover audio ready" : "No audio data",
+    videoUri,
+    integratedVideo,
+    audioIntegrated: Boolean(integratedVideo),
+    muxWarning,
+    displayPreview: integratedVideo
+      ? "Integrated video with voiceover ready"
+      : audio
+        ? "Voiceover audio ready"
+        : "No audio data",
   });
 
   return {

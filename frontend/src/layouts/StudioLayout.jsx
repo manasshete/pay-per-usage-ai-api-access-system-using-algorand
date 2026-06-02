@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
 import { motion } from "framer-motion";
@@ -8,6 +8,8 @@ import ProfileDropdown from "../components/ProfileDropdown.jsx";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client.js";
 import MegaNav from "../components/MegaNav.jsx";
+import StudioCreditWallet from "../components/studio/StudioCreditWallet.jsx";
+import { StudioOverageProvider } from "../components/studio/OverageConsentModal.jsx";
 
 const nav = [
   { id: "studio-home", path: "/studio", label: "Studio Home", icon: "home" },
@@ -63,6 +65,16 @@ export default function StudioLayout() {
     !pathname.includes("templates") &&
     !pathname.includes("history");
 
+  const [algodServer, setAlgodServer] = useState(
+    import.meta.env.VITE_ALGO_NODE_URL?.trim() || "https://testnet-api.algonode.cloud"
+  );
+
+  useEffect(() => {
+    api.get("/api/public/network").then(({ data }) => {
+      if (data?.algodServer) setAlgodServer(data.algodServer);
+    }).catch(() => {});
+  }, []);
+
   const { data: usage } = useQuery({
     queryKey: ["studio-usage"],
     queryFn: async () => {
@@ -73,18 +85,9 @@ export default function StudioLayout() {
 
   const limit = usage?.monthlyBlogLimit;
   const used = usage?.monthlyBlogsUsed ?? 0;
-  const promptLimit = usage?.monthlyPromptLimit;
-  const promptsUsed = usage?.monthlyPromptsUsed ?? 0;
-  const pct = limit != null && limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
-  const promptPct =
-    promptLimit != null && promptLimit > 0 ? Math.min(100, (promptsUsed / promptLimit) * 100) : 0;
-  const onPromptPage =
-    pathname.startsWith("/studio/prompt-generator") ||
-    pathname.startsWith("/studio/viral-thumbnail") ||
-    pathname.startsWith("/studio/creative-workflow") ||
-    pathname.startsWith("/studio/agentic-pipeline");
 
   return (
+    <StudioOverageProvider algodServer={algodServer}>
     <div className="antialiased min-h-screen bg-[#f9f9f9]">
       <MegaNav />
 
@@ -125,39 +128,11 @@ export default function StudioLayout() {
             );
           })}
         </nav>
-        <div className="mt-auto px-4 pt-4 border-t border-slate-200 space-y-2">
-          <div className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
-            {usage?.tier || "free"} plan · {onPromptPage ? "prompts" : "blogs"}
-          </div>
-          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-[#031634]"
-              initial={false}
-              animate={{ width: `${onPromptPage ? promptPct : pct}%` }}
-              transition={{ duration: 0.2 }}
-            />
-          </div>
-          <p className="text-[11px] text-slate-600">
-            {onPromptPage ? (
-              <>
-                {promptsUsed}
-                {promptLimit != null ? ` of ${promptLimit}` : ""} prompts this month
-              </>
-            ) : (
-              <>
-                {used}
-                {limit != null ? ` of ${limit}` : ""} blogs this month
-              </>
-            )}
-          </p>
-          {onPromptPage && promptLimit != null && promptsUsed >= promptLimit && (
-            <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
-              Prompt limit reached — upgrade for more.
-            </p>
-          )}
-          {!onPromptPage && limit != null && used >= limit && (
-            <p className="text-[10px] text-amber-800 bg-amber-50 border border-amber-100 rounded px-2 py-1.5">
-              Blog limit reached — upgrade for more.
+        <div className="mt-auto px-4 pt-4 border-t border-slate-200 space-y-3">
+          <StudioCreditWallet usage={usage} />
+          {limit != null && (
+            <p className="text-[10px] text-slate-500">
+              Blogs: {used} / {limit === null ? "∞" : limit} this month
             </p>
           )}
           <Link
@@ -188,5 +163,6 @@ export default function StudioLayout() {
         </motion.div>
       </main>
     </div>
+    </StudioOverageProvider>
   );
 }

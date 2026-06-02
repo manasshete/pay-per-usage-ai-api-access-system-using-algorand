@@ -153,11 +153,13 @@ function JsonStructured({ data }) {
           </div>
         </section>
       )}
-      {mediaSrc(data.audio) && <AudioPlayerBlock audio={data.audio} />}
+      {mediaSrc(data.audio) && !data.audioIntegrated && <AudioPlayerBlock audio={data.audio} />}
       {data.videoUri && (
         <section className="rounded-md bg-white border border-slate-100 p-2.5">
-          <h4 className="text-[10px] font-bold text-slate-500 uppercase mb-1">Video</h4>
-          {String(data.videoUri).startsWith("http") ? (
+          <h4 className="text-[10px] font-bold text-slate-500 uppercase mb-1">
+            {data.audioIntegrated || data.integratedVideo ? "Video with voiceover" : "Video"}
+          </h4>
+          {mediaSrc(data.videoUri) ? (
             <video controls className="w-full rounded-md" src={mediaSrc(data.videoUri)} />
           ) : (
             <p className="text-xs font-mono text-slate-600 break-all">{data.videoUri}</p>
@@ -264,7 +266,15 @@ export function NodeOutputPreview({ output, label, type, status, expanded, onTog
                 </div>
               )}
               {parsed.kind === "agenticAudio" && (
-                <>
+                <div className="space-y-2">
+                  {parsed.videoUri && mediaSrc(parsed.videoUri) && (
+                    <div>
+                      <p className="mb-1 text-[10px] font-semibold text-slate-500 uppercase">
+                        {parsed.audioIntegrated ? "Video with voiceover" : "Related video"}
+                      </p>
+                      <video controls className="w-full rounded-md" src={mediaSrc(parsed.videoUri)} />
+                    </div>
+                  )}
                   {mediaSrc(parsed.audio) ? (
                     <AudioPlayerBlock audio={parsed.audio} className="border-0 p-0" />
                   ) : typeof parsed.content === "string" &&
@@ -279,11 +289,11 @@ export function NodeOutputPreview({ output, label, type, status, expanded, onTog
                       {parsed.displayPreview || "No playable audio URL — re-run after backend deploy."}
                     </p>
                   )}
-                </>
+                </div>
               )}
               {parsed.kind === "agenticVideo" && (
                 <div className="text-[10px] text-slate-600 space-y-2">
-                  {parsed.videoUri && String(parsed.videoUri).startsWith("http") ? (
+                  {parsed.videoUri && mediaSrc(parsed.videoUri) ? (
                     <video controls className="w-full rounded-md" src={mediaSrc(parsed.videoUri)} />
                   ) : parsed.videoUri?.startsWith("gs://") ? (
                     <p className="text-xs font-mono break-all">{parsed.videoUri}</p>

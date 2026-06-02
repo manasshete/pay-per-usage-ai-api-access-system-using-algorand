@@ -172,7 +172,36 @@ export async function publishAgenticPayloadToGcs(payload, { scope = "pipeline", 
     }
   }
 
+  if (payload.integratedVideo?.tempPath) {
+    const tmp = payload.integratedVideo.tempPath;
+    if (typeof tmp === "string" && tmp && fs.existsSync(tmp)) {
+      const url = await uploadLocalFile(tmp, `${base}/video-integrated.mp4`, "video/mp4");
+      payload.videoUri = url;
+      payload.integratedVideo = { mimeType: "video/mp4", url };
+      payload.audioIntegrated = true;
+      try {
+        fs.unlinkSync(tmp);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
   if (payload.agent === "video" || payload.kind === "agenticVideo") {
+    const tmp = payload.integratedVideo?.tempPath;
+    if (typeof tmp === "string" && fs.existsSync(tmp)) {
+      const url = await uploadLocalFile(tmp, `${base}/video-integrated.mp4`, "video/mp4");
+      payload.content = url;
+      payload.videoUri = url;
+      payload.integratedVideo = { mimeType: "video/mp4", url };
+      payload.audioIntegrated = true;
+      try {
+        fs.unlinkSync(tmp);
+      } catch {
+        /* ignore */
+      }
+      return payload;
+    }
     const signed = await resolveGcsUri(payload.videoUri || payload.content);
     if (signed) {
       payload.content = signed;
@@ -233,6 +262,23 @@ export async function publishAgenticPayloadLocal(payload, { scope = "workflow", 
       const url = `/outputs/workflow/${relBase}/audio.${ext}`;
       payload.content = url;
       payload.audio = { mimeType: mime, url };
+      try {
+        fs.unlinkSync(tmp);
+      } catch {
+        /* ignore */
+      }
+    }
+  }
+
+  if (payload.integratedVideo?.tempPath) {
+    const tmp = payload.integratedVideo.tempPath;
+    if (typeof tmp === "string" && fs.existsSync(tmp)) {
+      const dest = path.join(absBase, "video-integrated.mp4");
+      fs.copyFileSync(tmp, dest);
+      const url = `/outputs/workflow/${relBase}/video-integrated.mp4`;
+      payload.videoUri = url;
+      payload.integratedVideo = { mimeType: "video/mp4", url };
+      payload.audioIntegrated = true;
       try {
         fs.unlinkSync(tmp);
       } catch {

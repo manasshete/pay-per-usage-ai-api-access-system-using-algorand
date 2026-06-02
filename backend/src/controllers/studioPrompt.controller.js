@@ -6,7 +6,6 @@ import {
   generateVariations,
   improvePrompt,
 } from "../services/geminiPromptService.js";
-import { incrementPromptUsage } from "../services/blog.service.js";
 
 function sseHeaders(res) {
   res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
@@ -27,7 +26,6 @@ async function streamAction(userId, res, runStream) {
   sseHeaders(res);
   try {
     await runStream((delta) => writeChunk(res, delta));
-    await incrementPromptUsage(userId);
     res.write("data: [DONE]\n\n");
   } catch (e) {
     console.error("[studio prompt]", e);
@@ -84,7 +82,6 @@ export async function postPromptAnalyze(req, res) {
   }
   try {
     const analysis = await analyzePrompt(prompt.trim());
-    await incrementPromptUsage(req.user.userId);
     res.json({ analysis });
   } catch (e) {
     console.error("[studio prompt analyze]", e);
@@ -99,7 +96,6 @@ export async function postPromptVariations(req, res) {
   }
   try {
     const text = await generateVariations(prompt.trim(), Number(count) || 3);
-    await incrementPromptUsage(req.user.userId);
     res.json({ text });
   } catch (e) {
     console.error("[studio prompt variations]", e);

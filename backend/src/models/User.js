@@ -1,4 +1,16 @@
 import mongoose from "mongoose";
+import { getPlanCredits } from "../constants/studioPlans.js";
+
+const overageEntrySchema = new mongoose.Schema(
+  {
+    runType: { type: String, required: true },
+    algoAmount: { type: Number, required: true },
+    txId: { type: String, required: true, index: true },
+    timestamp: { type: Date, default: Date.now },
+    settled: { type: Boolean, default: true },
+  },
+  { _id: false }
+);
 
 const userSchema = new mongoose.Schema(
   {
@@ -14,6 +26,9 @@ const userSchema = new mongoose.Schema(
       enum: ["free", "creator", "pro", "enterprise"],
       default: "free",
     },
+    /** Weighted Studio Credit wallet (replaces flat prompt/AI run counts). */
+    studioCredits: { type: Number, default: 15 },
+    studioOverageLog: { type: [overageEntrySchema], default: [] },
     monthlyBlogsUsed: { type: Number, default: 0 },
     monthlyPromptsUsed: { type: Number, default: 0 },
     usageResetAt: { type: Date },
@@ -26,5 +41,20 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: { createdAt: true, updatedAt: true } }
 );
+
+userSchema.index({ "studioOverageLog.txId": 1 });
+
+userSchema.methods.resetMonthlyCredits = function resetMonthlyCredits() {
+  const tier = this.subscriptionTier || "free";
+  this.studioCredits = getPlanCredits(tier);
+  return this.studioCredits;
+};
+
+userSchema.pre("save", function enforceNonNegativeCredits(next) {
+  if (typeof this.studioCredits === "number" && this.studioCredits < 0) {
+    this.studioCredits = 0;
+  }
+  next();
+});
 
 export const User = mongoose.model("User", userSchema);

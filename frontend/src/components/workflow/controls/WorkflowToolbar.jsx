@@ -39,9 +39,12 @@ export default function WorkflowToolbar({
         <button
           type="button"
           onClick={onOpenResults}
-          className="text-xs px-3 py-2 rounded-md border-2 border-emerald-500 bg-emerald-50 text-emerald-900 font-bold hover:bg-emerald-100 flex items-center gap-1"
+          title="Open execution results panel"
+          className="text-xs px-3 py-2 rounded-md border-2 border-emerald-500 bg-emerald-50 text-emerald-900 font-bold hover:bg-emerald-100 flex items-center gap-1.5"
         >
-          <span className="material-symbols-outlined text-base">panel_open</span>
+          <span className="material-symbols-outlined text-base leading-none" aria-hidden>
+            dock_to_right
+          </span>
           View results
         </button>
       )}

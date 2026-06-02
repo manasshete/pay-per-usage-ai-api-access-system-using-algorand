@@ -13,9 +13,12 @@ const envPath = path.resolve(__dirname, "..", ".env");
 
 dotenv.config({ path: envPath });
 
-// Fallback if only treasury wallet was configured earlier
+// Fallback if only treasury / sentinel wallet was configured earlier
 if (!process.env.RECEIVER_WALLET?.trim() && process.env.TREASURY_WALLET?.trim()) {
   process.env.RECEIVER_WALLET = process.env.TREASURY_WALLET.trim();
+}
+if (!process.env.RECEIVER_WALLET?.trim() && process.env.SENTINEL_WALLET_ADDRESS?.trim()) {
+  process.env.RECEIVER_WALLET = process.env.SENTINEL_WALLET_ADDRESS.trim();
 }
 
 console.log("[env] .env path:", envPath);

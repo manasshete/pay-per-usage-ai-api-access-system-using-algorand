@@ -7,7 +7,8 @@ import {
   normalizeAlgoAddress,
   parsePaymentFromIndexer,
 } from "../services/algorandService.js";
-import { getPlanPriceMicro, isPaidTier } from "../constants/studioPlans.js";
+import { getPlanPriceMicro, isPaidTier, getPlanCredits } from "../constants/studioPlans.js";
+import { resetMonthlyCredits } from "../services/studioCredits.js";
 import { sameWallet } from "../utils/userWallet.js";
 
 function getReceiverWallet() {
@@ -115,11 +116,18 @@ export async function postSubscriptionUpgrade(req, res) {
   const usageResetAt = new Date();
   usageResetAt.setDate(usageResetAt.getDate() + 30);
 
+  const previousTier = user.subscriptionTier || "free";
   user.subscriptionTier = tierNorm;
+
   user.usageResetAt = usageResetAt;
   user.monthlyBlogsUsed = 0;
   user.monthlyPromptsUsed = 0;
+  resetMonthlyCredits(user);
   await user.save();
+
+  console.info(
+    `[studio upgrade] user=${user._id} ${previousTier}→${tierNorm} credits=${getPlanCredits(tierNorm)} resetAt=${usageResetAt.toISOString()}`
+  );
 
   await TxRecord.create({
     txId: txIdTrim,
@@ -135,5 +143,7 @@ export async function postSubscriptionUpgrade(req, res) {
     usageResetAt: user.usageResetAt,
     monthlyBlogsUsed: user.monthlyBlogsUsed,
     monthlyPromptsUsed: user.monthlyPromptsUsed,
+    studioCredits: user.studioCredits,
+    studioCreditPool: getPlanCredits(tierNorm),
   });
 }

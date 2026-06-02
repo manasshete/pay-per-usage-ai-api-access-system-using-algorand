@@ -2,6 +2,8 @@
 
 import { Router } from "express";
 import { requireAuth } from "../../../middleware/auth.js";
+import { checkStudioCredits } from "../../../middleware/studioQuota.js";
+import { conditionalX402Gate } from "../../../middleware/x402OverageGate.js";
 import { getClipCraftRuntime } from "../production/ClipCraftRuntime.js";
 import { getClipCraftHealth } from "../production/health.js";
 import { exportChecklistJson, PRODUCTION_VALIDATION_CHECKLIST } from "../production/validationChecklist.js";
@@ -28,7 +30,7 @@ router.get("/checklist/items", (_req, res) => {
 
 router.use(requireAuth);
 
-router.post("/jobs", async (req, res) => {
+router.post("/jobs", checkStudioCredits("clipcraft_pack"), conditionalX402Gate, async (req, res) => {
   const runtime = getClipCraftRuntime();
   runtime.start();
   const { url, tier, packCount, exportTargets } = req.body;

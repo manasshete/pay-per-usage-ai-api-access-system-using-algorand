@@ -9,7 +9,6 @@ import {
   regenerateMainThumbnailImage,
   regenerateVariationImages,
 } from "../services/geminiImageService.js";
-import { incrementPromptUsage } from "../services/blog.service.js";
 
 async function attachImages(payload, strategy, generateImages) {
   if (generateImages === false) {
@@ -59,7 +58,6 @@ export async function postThumbnailGenerate(req, res) {
   try {
     let result = await generateThumbnailStrategy(payload);
     result = await attachImages(payload, result, generateImages !== false);
-    await incrementPromptUsage(req.user.userId);
     res.json({ result });
   } catch (e) {
     console.error("[studio thumbnail]", e);
@@ -89,7 +87,6 @@ export async function postThumbnailVariations(req, res) {
         result.imageWarning = friendlyImageError(err);
       }
     }
-    await incrementPromptUsage(req.user.userId);
     res.json({ result });
   } catch (e) {
     console.error("[studio thumbnail variations]", e);
@@ -112,7 +109,6 @@ export async function postThumbnailRegenerateImage(req, res) {
       },
       imageWarning: null,
     };
-    await incrementPromptUsage(req.user.userId);
     res.json({ result });
   } catch (e) {
     console.error("[studio thumbnail image]", e);

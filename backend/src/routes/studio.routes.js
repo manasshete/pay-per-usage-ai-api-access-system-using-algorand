@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
-import { checkBlogQuota, checkPromptQuota } from "../middleware/studioQuota.js";
+import { checkBlogQuota, checkStudioCredits } from "../middleware/studioQuota.js";
+import { conditionalX402Gate } from "../middleware/x402OverageGate.js";
 import * as studio from "../controllers/studio.controller.js";
 import * as studioSubscription from "../controllers/studioSubscription.controller.js";
 import * as studioPrompt from "../controllers/studioPrompt.controller.js";
@@ -9,6 +10,7 @@ import * as studioWorkflow from "../controllers/studioWorkflow.controller.js";
 import agenticPipelineRoutes from "./agenticPipeline.routes.js";
 import { workflowsRouter, runsRouter, templatesRouter } from "./workflows.js";
 import clipcraftRoutes from "../studio/clipcraft/routes/clipcraft.routes.js";
+import cogsReportRouter from "./admin/cogsReport.js";
 
 const router = Router();
 
@@ -23,22 +25,32 @@ router.use("/workflow-runs", runsRouter);
 router.use("/workflow-templates", templatesRouter);
 router.get("/usage", studio.getUsage);
 router.post("/subscription/upgrade", studioSubscription.postSubscriptionUpgrade);
+router.use("/admin", cogsReportRouter);
 
-router.post("/prompt/generate", checkPromptQuota, studioPrompt.postPromptGenerate);
-router.post("/prompt/enhance", checkPromptQuota, studioPrompt.postPromptEnhance);
-router.post("/prompt/improve", checkPromptQuota, studioPrompt.postPromptImprove);
-router.post("/prompt/analyze", checkPromptQuota, studioPrompt.postPromptAnalyze);
-router.post("/prompt/variations", checkPromptQuota, studioPrompt.postPromptVariations);
+const studioRunChain = (defaultRunType) => [
+  checkStudioCredits(defaultRunType),
+  conditionalX402Gate,
+];
 
-router.post("/thumbnail/generate", checkPromptQuota, studioThumbnail.postThumbnailGenerate);
-router.post("/thumbnail/variations", checkPromptQuota, studioThumbnail.postThumbnailVariations);
-router.post("/thumbnail/regenerate-image", checkPromptQuota, studioThumbnail.postThumbnailRegenerateImage);
+router.post("/prompt/generate", ...studioRunChain("prompt_single"), studioPrompt.postPromptGenerate);
+router.post("/prompt/enhance", ...studioRunChain("prompt_single"), studioPrompt.postPromptEnhance);
+router.post("/prompt/improve", ...studioRunChain("prompt_single"), studioPrompt.postPromptImprove);
+router.post("/prompt/analyze", ...studioRunChain("prompt_single"), studioPrompt.postPromptAnalyze);
+router.post("/prompt/variations", ...studioRunChain("prompt_single"), studioPrompt.postPromptVariations);
 
-router.post("/workflow/creative", checkPromptQuota, studioWorkflow.postCreativeWorkflow);
+router.post("/thumbnail/generate", ...studioRunChain("workflow_creative"), studioThumbnail.postThumbnailGenerate);
+router.post("/thumbnail/variations", ...studioRunChain("workflow_creative"), studioThumbnail.postThumbnailVariations);
+router.post(
+  "/thumbnail/regenerate-image",
+  ...studioRunChain("workflow_creative"),
+  studioThumbnail.postThumbnailRegenerateImage
+);
+
+router.post("/workflow/creative", ...studioRunChain("workflow_creative"), studioWorkflow.postCreativeWorkflow);
 
 router.use("/agentic", agenticPipelineRoutes);
 
-router.post("/blog/generate", checkBlogQuota, studio.postGenerateStream);
+router.post("/blog/generate", checkBlogQuota, ...studioRunChain("blog_draft"), studio.postGenerateStream);
 router.post("/blog/save", studio.postBlogSave);
 router.post("/blog/metadata", studio.postBlogMetadata);
 router.post("/blog/schedule", studio.postBlogSchedule);

@@ -1,11 +1,7 @@
+import { studioFetch } from "./studioFetch.js";
 import { api, getApiBase } from "./client.js";
 
 const BASE = "/api/studio/agentic";
-
-function authHeaders() {
-  const token = localStorage.getItem("sentinal_token");
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
 
 export function assetUrl(path) {
   if (!path) return "";
@@ -14,51 +10,87 @@ export function assetUrl(path) {
   return `${base}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-export function streamPipelineRun(inputText, imageFile, { onProgress, onComplete, onError }) {
+function parseSseChunk(raw, handlers) {
+  const line = raw.replace(/^data:\s*/m, "").trim();
+  if (!line || line.startsWith(":")) return false;
+  try {
+    const event = JSON.parse(line);
+    if (event.type === "progress") handlers.onProgress?.(event);
+    if (event.type === "complete") {
+      handlers.onComplete?.(event);
+      return true;
+    }
+    if (event.type === "error") handlers.onError?.(event.message);
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
+function drainSseBuffer(buffer, handlers) {
+  const parts = buffer.split("\n\n");
+  const remainder = parts.pop() || "";
+  let completed = false;
+  for (const part of parts) {
+    if (parseSseChunk(part, handlers)) completed = true;
+  }
+  return { remainder, completed };
+}
+
+function consumeSseStream(response, handlers) {
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let streamCompleted = false;
+  const wrapped = {
+    ...handlers,
+    onComplete: (event) => {
+      streamCompleted = true;
+      handlers.onComplete?.(event);
+    },
+  };
+
+  function read() {
+    reader
+      .read()
+      .then(({ done, value }) => {
+        if (value) buffer += decoder.decode(value, { stream: !done });
+        const drained = drainSseBuffer(buffer, wrapped);
+        buffer = drained.remainder;
+        if (drained.completed) streamCompleted = true;
+        if (done) {
+          if (buffer.trim()) {
+            const final = drainSseBuffer(`${buffer}\n\n`, wrapped);
+            if (final.completed) streamCompleted = true;
+          }
+          if (!streamCompleted) {
+            handlers.onError?.(
+              "Stream ended before delivery finished. Check Run History — your outputs may still be there."
+            );
+          }
+          return;
+        }
+        read();
+      })
+      .catch(handlers.onError);
+  }
+  read();
+}
+
+export function streamPipelineRun(inputText, imageFile, { runType = "agentic_text", onProgress, onComplete, onError }) {
   const formData = new FormData();
   formData.append("inputText", inputText);
+  formData.append("runType", runType);
   if (imageFile) formData.append("image", imageFile);
 
-  fetch(`${getApiBase()}${BASE}/run`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: formData,
-  })
+  studioFetch(`${BASE}/run`, { method: "POST", body: formData })
     .then((response) => {
       if (!response.ok) {
         return response.json().then((d) => {
           throw new Error(d.error || `HTTP ${response.status}`);
         });
       }
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      function read() {
-        reader
-          .read()
-          .then(({ done, value }) => {
-            if (done) return;
-            buffer += decoder.decode(value, { stream: true });
-            const parts = buffer.split("\n\n");
-            buffer = parts.pop() || "";
-            for (const part of parts) {
-              const line = part.replace(/^data:\s*/, "").trim();
-              if (!line || line.startsWith(":")) continue;
-              try {
-                const event = JSON.parse(line);
-                if (event.type === "progress") onProgress?.(event);
-                if (event.type === "complete") onComplete?.(event);
-                if (event.type === "error") onError?.(event.message);
-              } catch {
-                /* ignore */
-              }
-            }
-            read();
-          })
-          .catch(onError);
-      }
-      read();
+      consumeSseStream(response, { onProgress, onComplete, onError });
     })
     .catch(onError);
 }

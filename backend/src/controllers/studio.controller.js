@@ -18,6 +18,7 @@ import { publishBlogPost, STUDIO_PLATFORM } from "../services/blogPublishService
 import { PLATFORM_SETUP, verifyPlatformCredentials } from "../services/platformPublishers.js";
 import { parseScheduledFor } from "../utils/scheduleDate.js";
 import { limitForTier } from "../constants/studioLimits.js";
+import { getPlanCredits, getFeatureGates, CREDIT_WEIGHTS } from "../constants/studioPlans.js";
 
 // --- Blog ---
 
@@ -485,12 +486,24 @@ export async function listPublished(req, res) {
 export async function getUsage(req, res) {
   const user = await ensureUsageMonth(req.user.userId);
   const tier = user.subscriptionTier || "free";
+  const creditPool = getPlanCredits(tier);
+  const gates = getFeatureGates(tier);
+  const creditsUsed = Math.max(0, creditPool - (user.studioCredits ?? 0));
+
   res.json({
     tier,
     monthlyBlogsUsed: user.monthlyBlogsUsed || 0,
     monthlyBlogLimit: limitForTier(tier, "blogsPerMonth"),
-    monthlyPromptsUsed: user.monthlyPromptsUsed || 0,
-    monthlyPromptLimit: limitForTier(tier, "promptsPerMonth"),
+    maxProjects: limitForTier(tier, "maxProjects"),
+    studioCredits: user.studioCredits ?? 0,
+    studioCreditPool: creditPool,
+    studioCreditsUsed: creditsUsed,
+    creditWeights: CREDIT_WEIGHTS,
+    featureGates: gates,
     usageResetAt: user.usageResetAt,
+    /** @deprecated use studioCredits */
+    monthlyPromptsUsed: creditsUsed,
+    /** @deprecated use studioCreditPool */
+    monthlyPromptLimit: creditPool,
   });
 }

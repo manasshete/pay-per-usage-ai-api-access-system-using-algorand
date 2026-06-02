@@ -11,6 +11,9 @@ function imageSources(output) {
 
 export default function OutputViewer({ run }) {
   if (!run?.outputs?.length) return null;
+  const visibleOutputs = run.outputs.filter(
+    (output) => !(output.agent === "audio" && output.meta?.integratedIntoVideo)
+  );
 
   return (
     <div className="rounded-md border border-surface-variant bg-white overflow-hidden text-sm">
@@ -33,7 +36,7 @@ export default function OutputViewer({ run }) {
         )}
       </div>
 
-      {run.outputs.map((output, i) => (
+      {visibleOutputs.map((output, i) => (
         <div key={i} className="p-4 border-b border-surface-variant last:border-0">
           <p className="text-[10px] font-semibold uppercase text-slate-500 mb-2">
             {output.agent} output
@@ -65,7 +68,7 @@ export default function OutputViewer({ run }) {
             <div className="text-sm text-slate-600">
               {output.content ? (
                 <>
-                  {String(output.content).startsWith("http") ? (
+                  {mediaSrc(output.content) ? (
                     <video
                       controls
                       className="w-full max-w-lg rounded-md border border-slate-200"

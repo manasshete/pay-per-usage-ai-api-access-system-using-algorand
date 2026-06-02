@@ -1,11 +1,140 @@
-/** Studio subscription prices in microAlgos (1 ALGO = 1_000_000 microAlgos). */
+/**
+ * Sentinel AI Studio — subscription pricing, credit wallet, and x402 overage tiers.
+ * Exchange rates: set ALGO_USD_RATE and INR_USD_RATE in env (update weekly).
+ */
+
+const ALGO_USD = Number(process.env.ALGO_USD_RATE) || 0.129;
+const INR_USD = Number(process.env.INR_USD_RATE) || 84.5;
+export const ALGO_INR_RATE = ALGO_USD * INR_USD;
+
+/** @param {number} microAlgos */
+export function microToAlgo(microAlgos) {
+  return microAlgos / 1_000_000;
+}
+
+/** @param {number} microAlgos */
+export function microToInr(microAlgos) {
+  return microToAlgo(microAlgos) * ALGO_INR_RATE;
+}
+
+/** @param {number} microAlgos */
+export function microToUsd(microAlgos) {
+  return microToAlgo(microAlgos) * ALGO_USD;
+}
+
+/**
+ * Monthly subscription prices in microAlgos (1 ALGO = 1_000_000 microAlgos).
+ * @type {Record<string, number>}
+ */
 export const PLAN_PRICES = {
-  creator: 5_000_000,
-  pro: 15_000_000,
-  enterprise: 40_000_000,
+  free: 0,
+  /** ~₹491/mo · ~$5.81/mo @ ALGO=$0.129 */
+  creator: 45_000_000,
+  /** ~₹1,309/mo · ~$15.48/mo */
+  pro: 120_000_000,
+  /** ~₹3,819/mo · ~$45.15/mo */
+  enterprise: 350_000_000,
 };
 
 export const PAID_TIERS = ["creator", "pro", "enterprise"];
+
+/** Default monthly Studio Credit pools (overridable via STUDIO_CREDIT_* env). */
+export const PLAN_CREDITS = {
+  free: Number(process.env.STUDIO_CREDIT_FREE) || 15,
+  creator: Number(process.env.STUDIO_CREDIT_CREATOR) || 120,
+  pro: Number(process.env.STUDIO_CREDIT_PRO) || 400,
+  enterprise: Number(process.env.STUDIO_CREDIT_ENTERPRISE) || 1500,
+};
+
+/** Credit cost per run type. */
+export const CREDIT_WEIGHTS = {
+  prompt_single: 1,
+  blog_draft: 2,
+  workflow_ai_node: 2,
+  workflow_creative: 6,
+  agentic_text: 2,
+  agentic_images: 8,
+  agentic_video: 25,
+  agentic_full: 35,
+  clipcraft_pack: 5,
+};
+
+/** Overage tiers → microALGO (charged via x402 when credits exhausted). */
+export const OVERAGE_PRICES = {
+  lite: Number(process.env.STUDIO_OVERAGE_LITE_MICROALGO) ||
+    Math.round(Number(process.env.STUDIO_OVERAGE_LITE_ALGO || 0.5) * 1_000_000),
+  blog: Number(process.env.STUDIO_OVERAGE_BLOG_MICROALGO) ||
+    Math.round(Number(process.env.STUDIO_OVERAGE_BLOG_ALGO || 1.0) * 1_000_000),
+  creative: Number(process.env.STUDIO_OVERAGE_CREATIVE_MICROALGO) ||
+    Math.round(Number(process.env.STUDIO_OVERAGE_CREATIVE_ALGO || 2.5) * 1_000_000),
+  agentic_med: Number(process.env.STUDIO_OVERAGE_AGENTIC_MED_MICROALGO) ||
+    Math.round(Number(process.env.STUDIO_OVERAGE_AGENTIC_MED_ALGO || 5) * 1_000_000),
+  agentic_full: Number(process.env.STUDIO_OVERAGE_AGENTIC_FULL_MICROALGO) ||
+    Math.round(Number(process.env.STUDIO_OVERAGE_AGENTIC_FULL_ALGO || 15) * 1_000_000),
+};
+
+/** Run type → overage tier. */
+export const RUNTYPE_TO_OVERAGE = {
+  prompt_single: "lite",
+  blog_draft: "blog",
+  workflow_ai_node: "lite",
+  workflow_creative: "creative",
+  agentic_text: "lite",
+  agentic_images: "agentic_med",
+  agentic_video: "agentic_full",
+  agentic_full: "agentic_full",
+  clipcraft_pack: "creative",
+};
+
+export const VIDEO_RUN_TYPES = new Set(["agentic_video", "agentic_full"]);
+export const TTS_RUN_TYPES = new Set(["agentic_full"]);
+
+/**
+ * Feature gates by subscription tier.
+ * @type {Record<string, { videoAllowed: boolean, ttsAllowed: boolean, maxBlogs: number, maxProjects: number, publishPlatforms: string[] }>}
+ */
+export const FEATURE_GATES = {
+  free: {
+    videoAllowed: false,
+    ttsAllowed: false,
+    maxBlogs: 3,
+    maxProjects: 2,
+    publishPlatforms: [],
+  },
+  creator: {
+    videoAllowed: false,
+    ttsAllowed: true,
+    maxBlogs: 50,
+    maxProjects: 10,
+    publishPlatforms: ["medium", "linkedin"],
+  },
+  pro: {
+    videoAllowed: true,
+    ttsAllowed: true,
+    maxBlogs: Infinity,
+    maxProjects: Infinity,
+    publishPlatforms: ["medium", "linkedin", "wordpress", "devto", "hashnode", "twitter"],
+  },
+  enterprise: {
+    videoAllowed: true,
+    ttsAllowed: true,
+    maxBlogs: Infinity,
+    maxProjects: Infinity,
+    publishPlatforms: ["medium", "linkedin", "wordpress", "devto", "hashnode", "twitter", "white-label"],
+  },
+};
+
+export const RUN_TYPE_LABELS = {
+  prompt_single: "Prompt Generator",
+  blog_draft: "Blog draft",
+  workflow_ai_node: "Workflow AI node",
+  workflow_creative: "Creative workflow (prompt + image)",
+  agentic_text: "Agentic text run",
+  agentic_images: "Agentic images",
+  agentic_video: "Agentic video (Veo)",
+  agentic_full: "Agentic full run (video + audio)",
+  clipcraft_pack: "ClipCraft pack",
+};
 
 export function getPlanPriceMicro(tier) {
   return PLAN_PRICES[tier] ?? null;
@@ -13,4 +142,21 @@ export function getPlanPriceMicro(tier) {
 
 export function isPaidTier(tier) {
   return PAID_TIERS.includes(tier);
+}
+
+export function getPlanCredits(tier) {
+  return PLAN_CREDITS[tier] ?? PLAN_CREDITS.free;
+}
+
+export function getFeatureGates(tier) {
+  return FEATURE_GATES[tier] ?? FEATURE_GATES.free;
+}
+
+export function getCreditWeight(runType) {
+  return CREDIT_WEIGHTS[runType] ?? CREDIT_WEIGHTS.prompt_single;
+}
+
+export function getOverageMicro(runType) {
+  const tier = RUNTYPE_TO_OVERAGE[runType] ?? "lite";
+  return OVERAGE_PRICES[tier] ?? OVERAGE_PRICES.lite;
 }

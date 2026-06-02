@@ -21,11 +21,9 @@ export default function AgenticPipeline() {
     queryKey: ["studio-usage"],
     queryFn: async () => (await api.get("/api/studio/usage")).data,
   });
-  const promptLimit = usage?.monthlyPromptLimit;
-  const promptsUsed = usage?.monthlyPromptsUsed ?? 0;
-  const atCap = promptLimit != null && promptsUsed >= promptLimit;
+  const creditsLow = (usage?.studioCredits ?? 0) <= 0;
 
-  const pipeline = useAgenticPipeline({ atCap });
+  const pipeline = useAgenticPipeline({ atCap: false });
 
   useEffect(() => {
     pipeline.loadHistory();
@@ -47,16 +45,16 @@ export default function AgenticPipeline() {
               delivery.
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              {usage?.tier || "free"} plan · {promptsUsed}
-              {promptLimit != null ? ` of ${promptLimit}` : ""} AI runs (shared Studio quota)
+              {usage?.tier || "free"} plan · {usage?.studioCredits ?? 0} of {usage?.studioCreditPool ?? 15}{" "}
+              Studio Credits
             </p>
           </div>
         </div>
       </header>
 
-      {atCap && (
+      {creditsLow && (
         <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Studio AI quota reached.{" "}
+          Studio Credits exhausted — next runs will bill per-use in ALGO.{" "}
           <Link to="/studio/plan" className="font-semibold underline text-[#031634]">
             Upgrade
           </Link>
@@ -90,8 +88,9 @@ export default function AgenticPipeline() {
       )}
       {tab === "templates" && (
         <Templates
-          onUse={(prompt) => {
+          onUse={(prompt, runType = "agentic_text") => {
             pipeline.setInputText(prompt);
+            pipeline.setRunType(runType);
             setTab("builder");
           }}
         />

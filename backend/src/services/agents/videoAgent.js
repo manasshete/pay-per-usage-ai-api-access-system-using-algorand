@@ -31,17 +31,19 @@ async function pollVeoOperation(operationName, modelId, project, location) {
 }
 
 function buildVideoPrompt(inputText, memory, priorOutput) {
+  const qualityDirection =
+    "Natural live-action footage, realistic human motion, physically plausible lighting, documentary camera language, subtle handheld or dolly movement, coherent faces and hands, no surreal morphing, no synthetic gloss, no text overlays, no logos, no watermark.";
   if (priorOutput?.agent === "text") {
     const scenes = extractVisualPromptsFromScript(priorOutput.content, 3).join(". ");
     if (scenes) {
       const tone = memory.preferences?.tone || "cinematic";
-      return `${scenes}. Style: ${tone}, 4K, smooth camera motion.`;
+      return `${scenes}. Style: ${tone}, 4K, smooth camera motion. ${qualityDirection}`;
     }
   }
   if (priorOutput?.agent === "image") {
-    return `${priorOutput.meta?.prompt || inputText}. Animate with smooth motion, cinematic quality.`;
+    return `${priorOutput.meta?.prompt || inputText}. Animate with smooth motion and cinematic quality. ${qualityDirection}`;
   }
-  return inputText;
+  return `${inputText}. ${qualityDirection}`;
 }
 
 async function submitVeoJob(modelId, videoPrompt, project, location) {
@@ -52,6 +54,7 @@ async function submitVeoJob(modelId, videoPrompt, project, location) {
     aspectRatio: "16:9",
     sampleCount: 1,
     durationSeconds: 8,
+    enhancePrompt: true,
   };
   if (storageUri) {
     parameters.storageUri = storageUri;

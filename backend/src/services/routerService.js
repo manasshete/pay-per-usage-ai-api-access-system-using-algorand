@@ -31,7 +31,10 @@ export function inferChainFromPrompt(inputText, llmDecision = {}) {
     (/\bcinematic\b/.test(t) &&
       /\b(launch|promo|ad|advert|fitness|app)\b/.test(t) &&
       !/\b(script\s+only|write\s+only|blog)\b/.test(t));
-  const wantsAudio = /\b(narrat|voice\s*over|voiceover|tts|speak|audio|podcast)\b/.test(t);
+  const wantsSilent = /\b(silent|no\s+audio|without\s+(audio|voice|voiceover|narration))\b/.test(t);
+  const wantsAudio =
+    !wantsSilent &&
+    (wantsVideo || /\b(narrat|voice\s*over|voiceover|tts|speak|audio|podcast|sound)\b/.test(t));
   const wantsCode =
     /\b(python|automate|data\s+processing)\b/.test(t) &&
     !wantsImage &&

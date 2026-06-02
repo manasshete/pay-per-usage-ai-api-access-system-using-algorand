@@ -7,7 +7,18 @@ import OutputViewer from "../../../components/agentic-pipeline/OutputViewer.jsx"
 const inputClass =
   "w-full border border-slate-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#031634]/30";
 
+import { useStudioFeatures } from "../../../hooks/useStudioFeatures.js";
+import { CREDIT_WEIGHTS, RUN_TYPE_LABELS } from "../../../constants/studioPlans.js";
+
+const RUN_TYPE_OPTIONS = [
+  { id: "agentic_text", credits: CREDIT_WEIGHTS.agentic_text },
+  { id: "agentic_images", credits: CREDIT_WEIGHTS.agentic_images },
+  { id: "agentic_video", credits: CREDIT_WEIGHTS.agentic_video, requiresVideo: true },
+  { id: "agentic_full", credits: CREDIT_WEIGHTS.agentic_full, requiresVideo: true, requiresTts: true },
+];
+
 export default function PipelineBuilder({ pipeline }) {
+  const { videoAllowed, ttsAllowed } = useStudioFeatures();
   const {
     inputText,
     setInputText,
@@ -20,6 +31,8 @@ export default function PipelineBuilder({ pipeline }) {
     error,
     setError,
     run,
+    runType,
+    setRunType,
     phases,
     chainNodes,
   } = pipeline;
@@ -52,6 +65,41 @@ export default function PipelineBuilder({ pipeline }) {
           onChange={(e) => setInputText(e.target.value)}
           disabled={isRunning}
         />
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs font-semibold text-slate-600">Run mode:</span>
+          {RUN_TYPE_OPTIONS.map((opt) => {
+            const locked =
+              (opt.requiresVideo && !videoAllowed) || (opt.requiresTts && !ttsAllowed);
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                disabled={isRunning || locked}
+                title={
+                  locked
+                    ? opt.requiresVideo
+                      ? "Upgrade to Pro for video (Veo)"
+                      : "Upgrade for TTS"
+                    : `${opt.credits} credits`
+                }
+                onClick={() => setRunType(opt.id)}
+                className={`text-xs px-2.5 py-1 rounded-md border flex items-center gap-1 ${
+                  runType === opt.id
+                    ? "border-[#031634] bg-[#031634] text-white"
+                    : locked
+                      ? "border-slate-200 text-slate-400 cursor-not-allowed"
+                      : "border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                {locked && (
+                  <span className="material-symbols-outlined text-[14px]">lock</span>
+                )}
+                {RUN_TYPE_LABELS[opt.id]?.split("(")[0].trim() || opt.id}
+                <span className="opacity-70">({opt.credits}c)</span>
+              </button>
+            );
+          })}
+        </div>
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-xs font-semibold text-[#031634] cursor-pointer border border-dashed border-slate-300 rounded-md px-3 py-2 hover:bg-slate-50">
             Attach image (optional)

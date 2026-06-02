@@ -1,4 +1,3 @@
-import { incrementPromptUsage } from "../services/blog.service.js";
 import {
   friendlyWorkflowError,
   runPromptToImageWorkflow,
@@ -60,7 +59,6 @@ export async function postCreativeWorkflow(req, res) {
         ? await runThumbnailPromptWorkflow(input)
         : await runPromptToImageWorkflow(input);
 
-    await incrementPromptUsage(req.user.userId);
     res.json({ result });
   } catch (e) {
     console.error("[studio creative workflow]", e);

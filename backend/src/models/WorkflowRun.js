@@ -37,6 +37,8 @@ const workflowRunSchema = new mongoose.Schema(
     runtimeMs: { type: Number, default: 0 },
     triggeredBy: { type: String, default: "manual" },
     idempotencyKey: { type: String, sparse: true, unique: true },
+    runType: { type: String, default: null },
+    paidVia: { type: String, enum: ["credits", "x402_overage", "legacy", null], default: null },
     completedAt: { type: Date, default: null },
     structuredResult: { type: mongoose.Schema.Types.Mixed, default: null },
   },

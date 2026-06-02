@@ -8,6 +8,8 @@ import { runCodeAgent } from "./agents/codeAgent.js";
 import { evaluate } from "./evaluatorService.js";
 import { deliver } from "./deliveryService.js";
 import { PipelineRun } from "../models/PipelineRun.js";
+import { User } from "../models/User.js";
+import { getFeatureGates } from "../constants/studioPlans.js";
 
 const AGENT_MAP = {
   text: runTextAgent,
@@ -38,6 +40,17 @@ export async function runPipeline(userId, inputText, imagePath, onProgress) {
     onProgress?.({ phase: 3, label: "Routing intent…" });
     const decision = await routeIntent(inputText, memory);
     run.chain = decision.chain || ["text"];
+
+    const user = await User.findById(userId).lean();
+    const gates = getFeatureGates(user?.subscriptionTier || "free");
+    if (!gates.videoAllowed) {
+      run.chain = run.chain.filter((a) => a !== "video");
+    }
+    if (!gates.ttsAllowed) {
+      run.chain = run.chain.filter((a) => a !== "audio");
+    }
+    if (!run.chain.length) run.chain = ["text"];
+
     await run.save();
 
     onProgress?.({
@@ -53,10 +66,14 @@ export async function runPipeline(userId, inputText, imagePath, onProgress) {
       const agentFn = AGENT_MAP[agentName];
       if (!agentFn) continue;
       try {
+        const agentPrior =
+          agentName === "audio"
+            ? outputs.find((o) => o.agent === "text" && o.content) || prior
+            : prior;
         const output =
           agentName === "code"
             ? await agentFn(inputText)
-            : await agentFn(inputText, memory, prior);
+            : await agentFn(inputText, memory, agentPrior);
         outputs.push(output);
         prior = output;
       } catch (agentErr) {
