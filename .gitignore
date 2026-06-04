@@ -1,22 +1,29 @@
+```
+# Dependencies
 node_modules/
-.env
-.DS_Store
-dist/
-build/
-.vercel/
-chatbot/chat-front/node_modules/
-chatbot/chat-backend/node_modules/
-.cursor/
-.git/
-.github/
-.npmrc
-backend/uploads/
-backend/outputs/
-# GCP service account keys — never commit
-sentinal-ai-*.json
-**/service-account*.json
 
-# Scratch check and test scripts
-backend/check_key_details.js
-backend/test_legacy_flow_billing.js
-backend/test_x402_flow_billing.js
+# Environment
+.env
+.env.local
+*.env.*
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Editors
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-selfcheck.json
+```
