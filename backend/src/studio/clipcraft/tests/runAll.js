@@ -5,12 +5,14 @@ import { runStateMachineTests } from "./stateMachine.test.js";
 import { runCreditsTests } from "./credits.test.js";
 import { runUrlIngestionTests } from "./urlIngestion.test.js";
 import { runPipelineIntegrationTests } from "./pipeline.integration.test.js";
+import { runEslintConfigTests } from "./eslintConfig.test.js";
 
 const suites = [
   { name: "stateMachine", run: runStateMachineTests },
   { name: "credits", run: runCreditsTests },
   { name: "urlIngestion", run: runUrlIngestionTests },
   { name: "pipeline.integration", run: runPipelineIntegrationTests },
+  { name: "eslintConfig", run: runEslintConfigTests },
 ];
 
 const report = { ok: true, suites: [], total: 0, passed: 0, failed: 0 };
