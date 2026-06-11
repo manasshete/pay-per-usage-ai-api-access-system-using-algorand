@@ -6,8 +6,7 @@ import { usePeraLogin } from "../context/PeraLoginContext.jsx";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client.js";
 import logo from "../assets/logo.png";
-import ProfileDropdown from "../components/ProfileDropdown.jsx";
-import UserLiveWalletBar from "../components/UserLiveWalletBar.jsx";
+import MegaNav from "../components/MegaNav.jsx";
 import StudioCreditWallet from "../components/studio/StudioCreditWallet.jsx";
 import { StudioOverageProvider } from "../components/studio/OverageConsentModal.jsx";
 
@@ -201,60 +200,30 @@ export default function StudioLayout() {
   return (
     <StudioOverageProvider algodServer={algodServer}>
     <div className="antialiased min-h-screen bg-[#f9f9f9]">
-      <header className="fixed top-0 left-0 right-0 h-14 bg-white border-b border-slate-100 z-50 flex items-center justify-between px-4 md:pl-[252px]">
-        <div className="flex items-center gap-3 min-w-0">
-          <Link to="/studio" className="flex items-center gap-2 shrink-0" title="Studio Home">
-            <img src={logo} alt="Studio Home" className="w-8 h-8 rounded-lg object-contain border border-slate-200" />
-            <span className="font-headline font-semibold text-primary text-sm hidden sm:inline">Studio Home</span>
-          </Link>
-          {!isStudioHome && (
-            <>
-              <span className="text-slate-300 hidden sm:inline">/</span>
-              <span className="text-sm font-semibold text-slate-700 truncate">{sectionLabel}</span>
-            </>
-          )}
-        </div>
-        <div className="flex items-center gap-3 shrink-0">
-          {user?.walletAddress && <UserLiveWalletBar walletAddress={user.walletAddress} variant="pills" />}
-          {isAuthenticated ? (
-            <ProfileDropdown />
-          ) : (
-            <button
-              type="button"
-              onClick={() => connectWithPera({ redirect: pathname })}
-              className="flex items-center gap-2 px-4 py-1.5 bg-[#031634] text-white rounded-full text-sm font-semibold hover:bg-[#0a2855] transition-all cursor-pointer"
-            >
-              Connect Wallet
-            </button>
-          )}
-        </div>
-      </header>
+      <MegaNav />
 
       <aside className="fixed left-0 top-14 bottom-0 w-[240px] bg-slate-50 border-r border-slate-100 flex flex-col pt-4 pb-5 text-[0.875rem] overflow-y-auto scrollbar-hide z-40 max-md:hidden">
         <div className="px-4 mb-5">
           <Link to="/studio" className="block rounded-lg p-2 -mx-2 hover:bg-slate-100 transition-colors">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold shrink-0">
-                {userInitials(user?.displayName)}
-              </div>
-              <p className="font-headline font-semibold text-slate-900 text-sm truncate">
-                Hey {firstName} 👋
-              </p>
-            </div>
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
-                  {usage?.tier || "free"} plan
-                </span>
-                <span className="text-[10px] text-slate-500">{usageLabel}</span>
-              </div>
-              <div className="h-1 bg-slate-200 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-primary"
-                  initial={false}
-                  animate={{ width: `${usagePct}%` }}
-                  transition={{ duration: 0.2 }}
+              {user?.displayName ? (
+                <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold shrink-0">
+                  {userInitials(user?.displayName)}
+                </div>
+              ) : (
+                <img
+                  src={logo}
+                  alt="Studio Logo"
+                  className="w-10 h-10 rounded-lg object-contain border border-slate-200 shrink-0 bg-white p-1"
                 />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-headline font-semibold text-slate-900 text-sm truncate">
+                  Hey {firstName} 👋
+                </p>
+                <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">
+                  Pay-per-Call Mode
+                </p>
               </div>
             </div>
           </Link>
@@ -306,25 +275,13 @@ export default function StudioLayout() {
           })}
         </nav>
         <div className="mt-auto px-4 pt-4 border-t border-slate-200 space-y-2">
-          <StudioCreditWallet usage={usage} />
-          {user ? (
-            <Link
-              to="/studio/plan"
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-full text-sm font-semibold text-white bg-primary hover:opacity-90 transition-opacity duration-200"
-            >
-              <span aria-hidden>⚡</span>
-              Upgrade Plan
-            </Link>
-          ) : (
-            <button
-              type="button"
-              onClick={() => connectWithPera({ redirect: "/studio/plan" })}
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-full text-sm font-semibold text-white bg-primary hover:opacity-90 transition-opacity duration-200 cursor-pointer"
-            >
-              <span aria-hidden>⚡</span>
-              Connect to Upgrade
-            </button>
-          )}
+          <Link
+            to="/studio/plan"
+            className="flex items-center justify-center gap-2 w-full py-2.5 rounded-full text-sm font-semibold text-white bg-[#031634] hover:bg-[#0a2855] transition-all duration-200"
+          >
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">receipt_long</span>
+            Billing & Rates
+          </Link>
           <Link to="/marketplace/browse" className="text-[11px] text-secondary hover:underline block text-center">
             Switch to Marketplace →
           </Link>
@@ -339,7 +296,7 @@ export default function StudioLayout() {
         </div>
       </aside>
 
-      <main className="md:ml-[240px] pt-14 min-h-screen">
+      <main className="md:ml-[240px] pt-20 min-h-screen">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

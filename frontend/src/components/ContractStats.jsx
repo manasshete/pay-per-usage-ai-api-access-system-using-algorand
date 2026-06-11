@@ -126,7 +126,7 @@ export default function ContractStats() {
   const networkLabel = data?.network === "mainnet" ? "MainNet" : "TestNet";
 
   return (
-    <section className="mt-20 max-w-5xl mx-auto px-6">
+    <div className="w-full">
       <div className="text-center mb-8 flex flex-col items-center gap-2">
         <span className="text-[10px] font-bold tracking-[0.15em] text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100/50">
           On-Chain Validation
@@ -147,7 +147,7 @@ export default function ContractStats() {
 
       {err && <p className="text-sm text-amber-800 text-center mb-4">{err}</p>}
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard
           label="Paid API calls"
           numericValue={p?.totalApiCalls ?? 0}
@@ -174,7 +174,7 @@ export default function ContractStats() {
         />
       </div>
 
-      <div className="mt-6 grid sm:grid-cols-2 gap-6">
+      <div className="mt-6 grid sm:grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Platform Treasury Card */}
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
@@ -242,49 +242,52 @@ export default function ContractStats() {
                 </p>
                 <div className="font-mono text-xs text-slate-400 mt-2 break-all bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col gap-0.5">
                   <div>App ID: {contract.appId}</div>
-                  <div className="truncate">Address: {contract.address}</div>
+                  <div className="break-all">Address: {contract.address}</div>
                 </div>
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {contract.address && (
-                    <button
-                      type="button"
-                      onClick={() => copyText(contract.address, "Contract address")}
-                      className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-                    >
-                      Copy address
-                    </button>
-                  )}
-                  {contract.explorerUrl && (
-                    <a
-                      href={contract.explorerUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors text-slate-700 font-semibold"
-                    >
-                      View app
-                    </a>
-                  )}
-                </div>
-                <p className="text-[10px] text-slate-400 mt-3 border-t border-slate-100/50 pt-2 leading-relaxed">
-                  Global counters from deployed Sentinal smart contract
-                </p>
               </>
             ) : (
-              <>
-                <p className="text-xs text-slate-500 mt-3 leading-relaxed">
-                  No vault app deployed yet. Marketplace payments still go directly to creator wallets and
-                  are tracked above.
-                </p>
-                <p className="text-[10px] text-slate-400 mt-3 border-t border-slate-100/50 pt-2 font-mono">
-                  Deploy the contract and set contract/contract_info.json or ALGO_APP_ID in the backend to enable counters.
-                </p>
-              </>
+              <p className="text-xs text-slate-500 mt-3 leading-relaxed">
+                No vault app deployed yet. Marketplace payments still go directly to creator wallets and
+                are tracked above.
+              </p>
             )}
           </div>
+
+          {contract?.configured ? (
+            <>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {contract.address && (
+                  <button
+                    type="button"
+                    onClick={() => copyText(contract.address, "Contract address")}
+                    className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
+                  >
+                    Copy address
+                  </button>
+                )}
+                {contract.explorerUrl && (
+                  <a
+                    href={contract.explorerUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors text-slate-700 font-semibold"
+                  >
+                    View app
+                  </a>
+                )}
+              </div>
+              <p className="text-[10px] text-slate-400 mt-3 border-t border-slate-100/50 pt-2 leading-relaxed">
+                Global counters from deployed Sentinal smart contract
+              </p>
+            </>
+          ) : (
+            <p className="text-[10px] text-slate-400 mt-3 border-t border-slate-100/50 pt-2 font-mono">
+              Deploy the contract and set contract/contract_info.json or ALGO_APP_ID in the backend to enable counters.
+            </p>
+          )}
         </motion.div>
+
       </div>
-
-
-    </section>
+    </div>
   );
 }

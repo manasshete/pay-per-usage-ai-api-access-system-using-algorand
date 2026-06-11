@@ -18,11 +18,7 @@ export default function PromptGenerator() {
     queryFn: async () => (await api.get("/api/studio/usage")).data,
     enabled: Boolean(user),
   });
-  const promptLimit = usage?.monthlyPromptLimit;
-  const promptsUsed = usage?.monthlyPromptsUsed ?? 0;
-  const atCap = promptLimit != null && promptsUsed >= promptLimit;
-  const quotaLabel =
-    promptLimit != null ? `${promptsUsed} of ${promptLimit} prompts used` : `${promptsUsed} prompts used`;
+  const atCap = false;
 
   const pg = usePromptGenerator({ atCap });
 
@@ -46,10 +42,10 @@ export default function PromptGenerator() {
           <div>
             <h1 className="font-headline text-2xl font-semibold text-primary">Advanced Prompt Generator</h1>
             <p className="text-sm text-on-surface-variant mt-1 max-w-2xl">
-              Craft, analyze, and refine high-quality prompts with Gemini — included in your Studio subscription.
+              Craft, analyze, and refine high-quality prompts with Gemini — pay-per-call.
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              {usage?.tier || "free"} plan · {quotaLabel}
+              Pay-per-Call Mode · Micropayments enabled
             </p>
           </div>
         </div>
@@ -57,16 +53,6 @@ export default function PromptGenerator() {
 
       {!isAuthenticated && (
         <GuestConnectBanner message="Connect Pera Wallet to generate and save prompts." className="mb-6" />
-      )}
-
-      {atCap && (
-        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          You&apos;ve reached this month&apos;s Prompt Generator limit on the {usage?.tier || "free"} plan.{" "}
-          <Link to="/studio/plan" className="font-semibold text-[#031634] underline">
-            Upgrade your plan
-          </Link>{" "}
-          to continue.
-        </div>
       )}
 
       <div className="flex flex-col xl:flex-row gap-6 items-start">

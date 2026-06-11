@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Outlet } from "react-router-dom";
 import MegaNav from "../components/MegaNav.jsx";
 import DocsSidebar from "../components/DocsSidebar.jsx";
+import FloatingAssistant from "../components/FloatingAssistant.jsx";
 
 export default function DocsLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -12,7 +13,7 @@ export default function DocsLayout() {
       <MegaNav />
 
       {/* Main Layout Container */}
-      <div className="flex max-w-[1440px] mx-auto w-full pt-14 relative">
+      <div className="flex max-w-[1440px] mx-auto w-full pt-20 relative">
         {/* Left Sidebar Menu */}
         <DocsSidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
 
@@ -21,6 +22,9 @@ export default function DocsLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating Chat Assistant */}
+      <FloatingAssistant />
     </div>
   );
 }

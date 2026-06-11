@@ -159,7 +159,7 @@ export default function Home() {
                 className="font-body text-[16px] text-slate-500 max-w-2xl leading-relaxed text-center"
               >
                 A <strong className="text-slate-700">decentralized API marketplace</strong> — pay per call, no subscription. An{" "}
-                <strong className="text-slate-700">AI creative Studio</strong> for creators with optional monthly plans. Both settled on Algorand.
+                <strong className="text-slate-700">AI creative Studio</strong> for creators with pay-per-call micropayments. Both settled on Algorand.
               </motion.p>
 
               {/* 3 value pillars — centered row */}
@@ -282,8 +282,10 @@ export default function Home() {
         <HowItWorks />
 
         <section id="live-proof" className="relative z-10 scroll-mt-20">
-          <div className="max-w-6xl mx-auto px-6 grid gap-10 lg:grid-cols-[1fr_auto] items-start">
-            <ContractStats />
+          <div className="max-w-6xl mx-auto px-6 grid gap-10 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_420px] items-start">
+            <div className="w-full">
+              <ContractStats />
+            </div>
             <div className="lg:pt-20 w-full flex justify-center lg:justify-end">
               <LiveTxFeed />
             </div>

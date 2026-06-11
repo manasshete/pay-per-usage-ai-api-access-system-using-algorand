@@ -82,7 +82,7 @@ export function useWorkflowExecutor(workflowId) {
         const msg =
           runJson?.error ||
           (runRes.status === 402
-            ? "Studio credits exhausted — approve the ALGO overage payment or upgrade your plan."
+            ? "Payment required. Approve the ALGO execution payment in Pera Wallet."
             : "Run failed");
         throw new Error(msg);
       }

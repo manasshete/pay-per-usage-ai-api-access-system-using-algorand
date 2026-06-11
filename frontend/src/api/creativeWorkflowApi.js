@@ -1,14 +1,22 @@
-import { api } from "./client.js";
+import { studioFetch } from "./studioFetch.js";
 
 export function friendlyWorkflowError(err) {
   const msg = err?.response?.data?.error || err?.message || String(err);
-  if (msg.includes("quota exceeded")) {
-    return "Monthly Studio AI limit reached. Upgrade your plan to continue.";
+  if (msg.includes("quota exceeded") || msg.includes("402")) {
+    return "Payment required. Approve the transaction in your Pera Wallet.";
   }
   return msg.slice(0, 220) || "Workflow failed. Please retry.";
 }
 
 export async function runCreativeWorkflow(payload) {
-  const { data } = await api.post("/api/studio/workflow/creative", payload);
+  const res = await studioFetch("/api/studio/workflow/creative", {
+    method: "POST",
+    body: payload,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || res.statusText);
+  }
+  const data = await res.json();
   return data.result;
 }

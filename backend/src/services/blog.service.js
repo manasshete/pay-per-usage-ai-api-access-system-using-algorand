@@ -53,29 +53,13 @@ export async function countUserProjects(userId) {
 }
 
 export async function assertProjectSlot(userId) {
-  const user = await ensureUsageMonth(userId);
-  if (!user) return;
-  const tier = user.subscriptionTier || "free";
-  const max = TIER_LIMITS[tier]?.maxProjects ?? 2;
-  if (max === Infinity) return;
-  const n = await countUserProjects(userId);
-  if (!canCreateProject(user, n)) {
-    const err = new Error(`Project limit reached for ${tier} tier (${max})`);
-    err.status = 403;
-    throw err;
-  }
+  // Pay-per-call model has no project limits
+  return;
 }
 
 export async function assertBlogQuota(userId) {
+  // Pay-per-call model has no blog quota limits
   const user = await ensureUsageMonth(userId);
-  const tier = user.subscriptionTier || "free";
-  const limit = TIER_LIMITS[tier]?.blogsPerMonth ?? 3;
-  if (limit === Infinity) return user;
-  if ((user.monthlyBlogsUsed || 0) >= limit) {
-    const err = new Error("Monthly blog generation quota exceeded");
-    err.status = 403;
-    throw err;
-  }
   return user;
 }
 
@@ -84,15 +68,8 @@ export async function incrementBlogUsage(userId) {
 }
 
 export async function assertPromptQuota(userId) {
+  // Pay-per-call model has no prompt quota limits
   const user = await ensureUsageMonth(userId);
-  const tier = user.subscriptionTier || "free";
-  const limit = TIER_LIMITS[tier]?.promptsPerMonth ?? 10;
-  if (limit === Infinity) return user;
-  if ((user.monthlyPromptsUsed || 0) >= limit) {
-    const err = new Error("Monthly prompt generator quota exceeded. Upgrade your Studio plan.");
-    err.status = 403;
-    throw err;
-  }
   return user;
 }
 

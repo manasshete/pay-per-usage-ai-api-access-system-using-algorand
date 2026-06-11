@@ -8,6 +8,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { api, getApiBase } from "../../api/client.js";
+import { studioFetch } from "../../api/studioFetch.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 import { useWalletAction } from "../../hooks/useWalletAction.js";
 import GuestConnectBanner from "../../components/GuestConnectBanner.jsx";
@@ -120,9 +121,7 @@ export default function BloggingAgent() {
 
   const wc = editor ? wordCountFromHtml(editor.getHTML()) : 0;
   const rt = readingTime(wc);
-  const limit = usage?.monthlyBlogLimit;
-  const used = usage?.monthlyBlogsUsed ?? 0;
-  const quotaLabel = limit != null ? `${used} of ${limit} blogs used` : `${used} blogs used`;
+  const quotaLabel = "Pay-per-Call Mode · Micropayments enabled";
 
   const loadPost = useCallback(
     async (id) => {
@@ -236,16 +235,11 @@ export default function BloggingAgent() {
     setMetaDescription("");
     setSocialSnippets({ linkedin: "", twitter: "" });
 
-    const token = getToken();
-    const url = `${getApiBase()}/api/studio/blog/generate`;
+    const url = `/api/studio/blog/generate`;
     try {
-      const res = await fetch(url, {
+      const res = await studioFetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
+        body: {
           projectId,
           topic: topic.trim(),
           keywords,
@@ -253,7 +247,7 @@ export default function BloggingAgent() {
           targetAudience,
           wordCount: wordCountTarget,
           brandVoice,
-        }),
+        },
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));

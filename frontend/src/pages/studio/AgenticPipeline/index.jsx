@@ -21,7 +21,7 @@ export default function AgenticPipeline() {
     queryKey: ["studio-usage"],
     queryFn: async () => (await api.get("/api/studio/usage")).data,
   });
-  const creditsLow = (usage?.studioCredits ?? 0) <= 0;
+  const creditsLow = false;
 
   const pipeline = useAgenticPipeline({ atCap: false });
 
@@ -45,21 +45,11 @@ export default function AgenticPipeline() {
               delivery.
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              {usage?.tier || "free"} plan · {usage?.studioCredits ?? 0} of {usage?.studioCreditPool ?? 15}{" "}
-              Studio Credits
+              Pay-per-Call Mode · Micropayments enabled
             </p>
           </div>
         </div>
       </header>
-
-      {creditsLow && (
-        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Studio Credits exhausted — next runs will bill per-use in ALGO.{" "}
-          <Link to="/studio/plan" className="font-semibold underline text-[#031634]">
-            Upgrade
-          </Link>
-        </div>
-      )}
 
       <div className="flex gap-1 border-b border-surface-variant mb-6">
         {TABS.map((t) => (

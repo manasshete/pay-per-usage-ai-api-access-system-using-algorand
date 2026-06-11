@@ -68,7 +68,7 @@ export default function OnChainContract() {
       </div>
 
       {/* Main contract statistics component */}
-      <div className="-mt-16 mb-12">
+      <div className="-mt-16 mb-12 max-w-5xl mx-auto">
         <ContractStats />
       </div>
 

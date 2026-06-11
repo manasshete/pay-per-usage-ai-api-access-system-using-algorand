@@ -41,9 +41,9 @@ export default function OverageConsentModal({ open, overage, onCancel, onSuccess
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/40">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Studio overage payment</h2>
+        <h2 className="text-lg font-semibold text-slate-900">Confirm Studio Run</h2>
         <p className="text-sm text-slate-600">
-          Your Studio Credits are exhausted. This run requires a one-time ALGO payment.
+          Sentinel AI Studio operates on a pay-per-call model. This run requires an on-chain ALGO payment.
         </p>
         <div className="rounded-md bg-slate-50 border border-slate-200 p-4 space-y-1">
           <p className="text-sm font-medium text-slate-800">{label}</p>
@@ -73,12 +73,6 @@ export default function OverageConsentModal({ open, overage, onCancel, onSuccess
             {busy ? "Signing…" : `Pay ${amountAlgo} ALGO`}
           </button>
         </div>
-        <p className="text-[11px] text-slate-500 text-center">
-          Frequent overages?{" "}
-          <Link to="/studio/plan" className="text-[#031634] font-semibold underline">
-            Upgrade your plan
-          </Link>
-        </p>
       </div>
     </div>
   );

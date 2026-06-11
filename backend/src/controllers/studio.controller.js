@@ -484,26 +484,26 @@ export async function listPublished(req, res) {
 }
 
 export async function getUsage(req, res) {
-  const user = await ensureUsageMonth(req.user.userId);
-  const tier = user.subscriptionTier || "free";
-  const creditPool = getPlanCredits(tier);
-  const gates = getFeatureGates(tier);
-  const creditsUsed = Math.max(0, creditPool - (user.studioCredits ?? 0));
-
   res.json({
-    tier,
-    monthlyBlogsUsed: user.monthlyBlogsUsed || 0,
-    monthlyBlogLimit: limitForTier(tier, "blogsPerMonth"),
-    maxProjects: limitForTier(tier, "maxProjects"),
-    studioCredits: user.studioCredits ?? 0,
-    studioCreditPool: creditPool,
-    studioCreditsUsed: creditsUsed,
+    tier: "pay-per-call",
+    monthlyBlogsUsed: 0,
+    monthlyBlogLimit: null,
+    maxProjects: null,
+    studioCredits: 0,
+    studioCreditPool: 0,
+    studioCreditsUsed: 0,
     creditWeights: CREDIT_WEIGHTS,
-    featureGates: gates,
-    usageResetAt: user.usageResetAt,
+    featureGates: {
+      videoAllowed: true,
+      ttsAllowed: true,
+      maxBlogs: Infinity,
+      maxProjects: Infinity,
+      publishPlatforms: ["medium", "linkedin", "wordpress", "devto", "hashnode", "twitter", "white-label"],
+    },
+    usageResetAt: null,
     /** @deprecated use studioCredits */
-    monthlyPromptsUsed: creditsUsed,
+    monthlyPromptsUsed: 0,
     /** @deprecated use studioCreditPool */
-    monthlyPromptLimit: creditPool,
+    monthlyPromptLimit: 0,
   });
 }

@@ -34,6 +34,7 @@ export default function FloatingAssistant() {
   const prefersReducedMotion = useReducedMotion();
   const inputRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const suggestionsRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
@@ -55,6 +56,22 @@ export default function FloatingAssistant() {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open]);
+
+  // Redirect vertical scroll to horizontal scroll on the suggestions container
+  useEffect(() => {
+    const el = suggestionsRef.current;
+    if (!el) return;
+
+    function handleWheel(e) {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY * 0.8; // scroll amount adjustment
+      }
+    }
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [open, showSuggestions, messages]);
 
   function handleAction(action) {
     if (!action) return;
@@ -88,7 +105,7 @@ export default function FloatingAssistant() {
     };
 
     setMessages((prev) => [...prev, { role: "user", content: userContent }, assistantMsg]);
-    setShowSuggestions(result.showSuggestions ?? false);
+    setShowSuggestions(true);
     setInput("");
   }
 
@@ -96,6 +113,17 @@ export default function FloatingAssistant() {
     e.preventDefault();
     handleSend(input);
   }
+
+  // Filter out suggestions that have already been asked
+  const remainingSuggestions = TOP_SUGGESTIONS.filter((entry) => {
+    return !messages.some((m) => {
+      if (m.role !== "user") return false;
+      const normMsg = m.content.toLowerCase().trim();
+      const normQ = entry.question.toLowerCase().trim();
+      if (normMsg === normQ) return true;
+      return entry.aliases.some((alias) => normMsg === alias.toLowerCase().trim());
+    });
+  });
 
   const panelMotion = prefersReducedMotion
     ? {
@@ -186,14 +214,17 @@ export default function FloatingAssistant() {
             </div>
 
             {/* Suggestions */}
-            {showSuggestions && (
-              <div className="px-4 pb-2 flex flex-wrap gap-2 shrink-0">
-                {TOP_SUGGESTIONS.map((entry) => (
+            {showSuggestions && remainingSuggestions.length > 0 && (
+              <div
+                ref={suggestionsRef}
+                className="px-4 pb-3 flex overflow-x-auto gap-2 shrink-0 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-200/80 hover:[&::-webkit-scrollbar-thumb]:bg-indigo-300 [&::-webkit-scrollbar-track]:bg-transparent"
+              >
+                {remainingSuggestions.map((entry) => (
                   <button
                     key={entry.id}
                     type="button"
                     onClick={() => handleSend(entry.question)}
-                    className="text-[11.5px] font-medium text-slate-600 bg-white border border-slate-200/80 rounded-full px-3 py-1.5 hover:border-indigo-300 hover:text-indigo-700 hover:bg-indigo-50/50 transition-colors"
+                    className="whitespace-nowrap shrink-0 text-[11.5px] font-medium text-slate-600 bg-white border border-slate-200/80 rounded-full px-3.5 py-1.5 hover:border-indigo-300 hover:text-indigo-700 hover:bg-indigo-50/50 transition-colors shadow-sm"
                   >
                     {entry.question}
                   </button>

@@ -3,6 +3,8 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import { usePeraLogin } from "../context/PeraLoginContext.jsx";
 
+import logo from "../assets/logo.png";
+
 export const BROWSE_TABS = [
   { id: "browse", path: "/marketplace/browse", icon: "storefront", label: "Browse APIs" },
   { id: "creators", path: "/marketplace/creators", icon: "group", label: "Creator Profiles" },
@@ -111,9 +113,17 @@ export default function MarketplaceSidebar() {
       <div className="px-4 mb-5">
         <Link to="/marketplace/browse" className="block rounded-lg p-2 -mx-2 hover:bg-slate-100 transition-colors">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold shrink-0">
-              {userInitials(user?.displayName)}
-            </div>
+            {user?.displayName ? (
+              <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center text-sm font-semibold shrink-0">
+                {userInitials(user?.displayName)}
+              </div>
+            ) : (
+              <img
+                src={logo}
+                alt="Studio Logo"
+                className="w-10 h-10 rounded-lg object-contain border border-slate-200 shrink-0 bg-white p-1"
+              />
+            )}
             <p className="font-headline font-semibold text-slate-900 text-sm truncate">
               Hey {firstName} 👋
             </p>

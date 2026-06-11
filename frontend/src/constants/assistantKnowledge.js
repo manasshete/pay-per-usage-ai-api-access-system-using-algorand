@@ -63,7 +63,7 @@ export const ASSISTANT_FAQ = [
     aliases: ["what is sentinal", "what is sentinel", "about sentinal", "tell me about sentinal"],
     answer:
       "Sentinal is a decentralized pay-per-use AI platform built on Algorand. Browse AI APIs in the Marketplace or create content with AI Studio — every call is billed in micro-ALGO with on-chain transparency.",
-    action: { type: "scroll", target: "how-it-works", label: "Learn how it works" },
+    action: { type: "route", target: "/docs/how-it-works", label: "Learn how it works" },
   },
   {
     id: "features",
@@ -187,11 +187,11 @@ export const ASSISTANT_FAQ = [
   },
   {
     id: "studio-plan",
-    question: "What are Studio plan limits?",
-    aliases: ["studio pricing", "plan limits", "upgrade studio", "studio plan"],
+    question: "What are Studio execution rates?",
+    aliases: ["studio pricing", "plan limits", "upgrade studio", "studio plan", "studio rates"],
     answer:
-      "Compare Studio tiers and usage limits on the plan page to find the right fit for your content workflow.",
-    action: { type: "route", target: "/studio/plan", label: "View Studio plans" },
+      "Sentinel AI Studio operates on a pay-per-call model. Every tool execution (such as Blogging Agent, Prompt Generator, or Creative Workflow) requires a simple on-demand ALGO payment signed in Pera Wallet.",
+    action: { type: "route", target: "/studio/plan", label: "View execution rates" },
   },
   {
     id: "gateway",
