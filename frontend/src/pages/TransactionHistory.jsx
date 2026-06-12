@@ -4,8 +4,14 @@ import toast from "react-hot-toast";
 import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useEffect, useMemo, useState } from "react";
+import { testnetTxUrl } from "../utils/explorer.js";
 
-const EXPLORER_TX = "https://testnet.algoexplorer.io/tx/";
+function shortGroupId(groupId) {
+  if (!groupId || typeof groupId !== "string") return "";
+  const s = groupId.trim();
+  if (s.length <= 16) return s;
+  return `${s.slice(0, 8)}…${s.slice(-8)}`;
+}
 
 export default function TransactionHistory() {
   const { user } = useAuth();
@@ -50,9 +56,9 @@ export default function TransactionHistory() {
   }, [query]);
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="pt-4 pb-8 w-full">
         <div className="flex flex-wrap items-center gap-3 mb-6">
-          <Link to="/dashboard/browse" className="text-secondary hover:underline text-sm">
+          <Link to="/marketplace/browse" className="text-secondary hover:underline text-sm">
             ← Marketplace
           </Link>
           <span className="font-headline font-semibold text-primary">Billing &amp; transactions</span>
@@ -122,19 +128,21 @@ export default function TransactionHistory() {
                 <th className="px-3 py-3">Service</th>
                 <th className="px-3 py-3">Tokens</th>
                 <th className="px-3 py-3">ALGO</th>
+                <th className="px-3 py-3">Payment</th>
+                <th className="px-3 py-3">Group</th>
                 <th className="px-3 py-3">Proof</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-on-surface-variant">
+                  <td colSpan={7} className="px-3 py-8 text-center text-on-surface-variant">
                     Loading…
                   </td>
                 </tr>
               ) : items.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-3 py-8 text-center text-on-surface-variant">
+                  <td colSpan={7} className="px-3 py-8 text-center text-on-surface-variant">
                     No rows match your filters.
                   </td>
                 </tr>
@@ -150,9 +158,52 @@ export default function TransactionHistory() {
                     </td>
                     <td className="px-3 py-2 font-mono">{Number(row.chargeAlgo ?? row.amountAlgo).toFixed(6)}</td>
                     <td className="px-3 py-2">
+                      {row.x402Payment && (
+                        <span className="inline-block text-[10px] font-bold uppercase tracking-wide bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded mb-1">
+                          x402
+                        </span>
+                      )}
+                      {row.paymentTxId ? (
+                        <a
+                          href={testnetTxUrl(row.paymentTxId)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-secondary underline block text-xs"
+                          title={row.paymentTxId}
+                        >
+                          View payment tx
+                        </a>
+                      ) : (
+                        <span className="text-on-surface-variant text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {row.paymentGroupId ? (
+                        <div className="space-y-1">
+                          <button
+                            type="button"
+                            className="font-mono text-[10px] text-on-surface-variant block max-w-[140px] truncate text-left hover:text-secondary"
+                            title={row.paymentGroupId}
+                            onClick={() => {
+                              navigator.clipboard.writeText(row.paymentGroupId).then(() => toast.success("Group ID copied"));
+                            }}
+                          >
+                            {shortGroupId(row.paymentGroupId)}
+                          </button>
+                          {Array.isArray(row.paymentGroupTxIds) && row.paymentGroupTxIds.length > 1 && (
+                            <span className="text-[10px] text-on-surface-variant block">
+                              {row.paymentGroupTxIds.length} txs in group
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-on-surface-variant text-xs">single tx</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
                       {row.proofTxId ? (
                         <a
-                          href={`${EXPLORER_TX}${row.proofTxId}`}
+                          href={testnetTxUrl(row.proofTxId)}
                           target="_blank"
                           rel="noreferrer"
                           className="text-secondary underline"
@@ -175,6 +226,8 @@ export default function TransactionHistory() {
                   </td>
                   <td className="px-3 py-3 font-mono">{summary.totalTokensConsumed.toLocaleString()} tok</td>
                   <td className="px-3 py-3 font-mono">{summary.totalAlgoSpent.toFixed(6)} ALGO</td>
+                  <td className="px-3 py-3" />
+                  <td className="px-3 py-3" />
                   <td className="px-3 py-3" />
                 </tr>
               </tfoot>

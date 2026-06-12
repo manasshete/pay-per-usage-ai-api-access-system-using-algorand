@@ -294,13 +294,9 @@ npm run dev
 
 **Smart contract (optional)**
 
-```bash
-cd contract
-python -m venv .venv
-# Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-python deploy.py
-```
+The contract is deployed to Algorand, while Render only stores its public app
+ID/address configuration. Use the production deployment and Render wiring guide:
+[docs/CONTRACT_DEPLOYMENT.md](docs/CONTRACT_DEPLOYMENT.md).
 
 ### 6.2 Verify
 

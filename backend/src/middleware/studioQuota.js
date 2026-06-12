@@ -42,53 +42,14 @@ export function checkStudioCredits(defaultRunType) {
       req.studioRunType = runType;
       const cost = CREDIT_WEIGHTS[runType];
 
-      const user = await ensureUsageMonth(req.user.userId);
-      if (!user) return res.status(404).json({ error: "User not found" });
-
-      const tier = user.subscriptionTier || "free";
-      const pool = getPlanCredits(tier);
-      try {
-        assertFeatureGate(tier, runType);
-      } catch (gateErr) {
-        return res.status(gateErr.status || 403).json({
-          error: gateErr.message,
-          code: gateErr.code,
-          requiredPlan: gateErr.requiredPlan,
-          runType,
-        });
-      }
-
       req.studioCreditCost = cost;
-
-      // Enterprise: soft-unlimited credits (refill pool when exhausted, no x402 friction).
-      if (tier === "enterprise") {
-        if ((user.studioCredits ?? 0) < cost) {
-          user.studioCredits = pool;
-        }
-        user.studioCredits = Math.max(0, (user.studioCredits ?? 0) - cost);
-        await user.save();
-        req.creditDeducted = true;
-        req.creditsRemaining = user.studioCredits;
-        req.x402Required = false;
-        return next();
-      }
-
-      if ((user.studioCredits ?? 0) >= cost) {
-        user.studioCredits = Math.max(0, (user.studioCredits ?? 0) - cost);
-        await user.save();
-        req.creditDeducted = true;
-        req.creditsRemaining = user.studioCredits;
-        req.x402Required = false;
-        return next();
-      }
-
       req.creditDeducted = false;
       req.x402Required = true;
       req.x402RunType = runType;
       req.x402OverageTier = RUNTYPE_TO_OVERAGE[runType] ?? "lite";
       req.x402AmountMicro = OVERAGE_PRICES[req.x402OverageTier];
-      req.creditsRemaining = user.studioCredits ?? 0;
-      req.studioCreditPool = pool;
+      req.creditsRemaining = 0;
+      req.studioCreditPool = 0;
       return next();
     } catch (e) {
       const status = e.status || 500;

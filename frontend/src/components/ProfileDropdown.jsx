@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext.jsx";
-import { connectPera } from "../wallet/pera.js";
+import { ensureConnectedWallet } from "../wallet/signPayment.js";
 import { api } from "../api/client.js";
 
 export function shortenWalletAddress(addr) {
@@ -66,8 +66,8 @@ export default function ProfileDropdown() {
   const handleLinkWallet = async () => {
     setLinking(true);
     try {
-      toast.loading("Connecting Pera Wallet...", { id: "pera-link-dropdown" });
-      const address = await connectPera();
+      toast.loading("Connecting wallet...", { id: "pera-link-dropdown" });
+      const address = await ensureConnectedWallet();
       toast.loading("Linking address to your profile...", { id: "pera-link-dropdown" });
       await linkWallet(address);
       toast.success("Wallet linked successfully!", { id: "pera-link-dropdown" });
@@ -255,7 +255,7 @@ export default function ProfileDropdown() {
                   AI Studio
                 </Link>
                 <Link
-                  to="/dashboard/browse"
+                  to="/marketplace/browse"
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-2 py-1.5 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white text-xs font-medium transition-colors"
                 >
@@ -282,7 +282,7 @@ export default function ProfileDropdown() {
                   AI Studio
                 </Link>
                 <Link
-                  to="/dashboard/browse"
+                  to="/marketplace/browse"
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-2 py-1.5 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white text-xs font-medium transition-colors"
                 >

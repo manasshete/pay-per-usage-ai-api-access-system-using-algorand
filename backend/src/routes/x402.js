@@ -45,6 +45,7 @@ import {
   send402Response,
   parseXPaymentHeader,
   verifyX402Payment,
+  verifyX402PaymentByTxId,
 } from "../services/x402Middleware.js";
 
 const router = Router();
@@ -76,12 +77,6 @@ async function resolveService(serviceId) {
   const service = await Service.findById(serviceId);
   if (!service) {
     return { error: "Service not found", status: 404 };
-  }
-  if (!service.x402Enabled) {
-    return {
-      error: "This service has not enabled x402 payments. Use /api/use for the standard 2-step flow.",
-      status: 403,
-    };
   }
   if (service.isPaused) {
     return { error: "Service is currently paused", status: 503 };
@@ -141,7 +136,7 @@ function extractResponseText(aiResponse) {
  * Public endpoint — no authentication required.
  */
 router.get("/services", async (_req, res) => {
-  const services = await Service.find({ x402Enabled: true, isPaused: false }).sort({ totalUses: -1 }).lean();
+  const services = await Service.find({ isPaused: false }).sort({ totalUses: -1 }).lean();
 
   const result = services
     .filter((s) => s.aiProvider && s.encryptedApiKey && s.creatorWallet)
@@ -154,12 +149,12 @@ router.get("/services", async (_req, res) => {
       model: s.modelName,
       creator_wallet: s.creatorWallet,
       pricing: {
-        fixed_charge_algo: Number(s.minimumChargeAlgo),
-        fixed_charge_micro_algos: algoToMicroAlgos(s.minimumChargeAlgo),
-        billing_model: "fixed-per-call",
+        price_per_thousand_tokens: Number(s.pricePerThousandTokens),
+        minimum_charge_algo: Number(s.minimumChargeAlgo),
+        billing_model: "per-token-with-floor",
         note:
-          "x402 calls are charged a fixed amount equal to minimumChargeAlgo per call. " +
-          "For per-token pricing, use POST /api/use instead.",
+          "x402 calls are charged based on estimated token usage (pricePerThousandTokens) " +
+          "with a floor of minimumChargeAlgo per call.",
       },
       usage: {
         total_calls: s.totalUses || 0,
@@ -215,15 +210,36 @@ router.post("/use/:serviceId", x402RateLimit, async (req, res) => {
   }
 
   const creatorWallet = normalizeAlgoAddress(String(service.creatorWallet).trim());
-  const chargeAlgo = Number(service.minimumChargeAlgo);
+
+  const aiBody = normalizeBody(req.body);
+  if (!aiBody) {
+    return res.status(400).json({
+      error: "Provide either messages (array) or prompt (string) in the request body",
+    });
+  }
+
+  const promptTokens = estimateTokensFromOpenAiMessages(aiBody.messages);
+  const estimatedCompletionTokens = Number(aiBody.max_tokens ?? 1024);
+  const estimatedTotalTokens = promptTokens + estimatedCompletionTokens;
+  const chargeAlgo = computeChargeAlgo(
+    estimatedTotalTokens,
+    Number(service.pricePerThousandTokens),
+    Number(service.minimumChargeAlgo)
+  );
   const expectedMicroAlgos = algoToMicroAlgos(chargeAlgo);
 
-  // ── 2. Check for X-Payment header ────────────────────────────────────────
+  // ── 2. Check for X-Payment header or txId proof ─────────────────────────
   const xPaymentHeader = req.headers["x-payment"];
   const paymentPayload = parseXPaymentHeader(xPaymentHeader);
+  const txIdProof = String(
+    req.body?.txId ||
+      req.body?.paymentTxId ||
+      req.headers["x-payment-txn-id"] ||
+      ""
+  ).trim();
 
-  // ── ROUND 1: No payment header → return 402 challenge ────────────────────
-  if (!paymentPayload) {
+  // ── ROUND 1: No payment proof → return 402 challenge ─────────────────────
+  if (!paymentPayload && !txIdProof) {
     const resource = `${req.protocol}://${req.get("host")}/api/x402/use/${service._id}`;
     const paymentRequirements = buildPaymentRequirements({
       payTo: creatorWallet,
@@ -234,14 +250,20 @@ router.post("/use/:serviceId", x402RateLimit, async (req, res) => {
     return send402Response(res, paymentRequirements);
   }
 
-  // ── ROUND 2: Payment header present → verify + call AI ───────────────────
+  // ── ROUND 2: Payment proof present → verify + call AI ────────────────────
 
   // 3. Verify the x402 payment on-chain
-  const verification = await verifyX402Payment({
-    payload: paymentPayload,
-    expectedReceiver: creatorWallet,
-    expectedMicroAlgos,
-  });
+  const verification = paymentPayload
+    ? await verifyX402Payment({
+        payload: paymentPayload,
+        expectedReceiver: creatorWallet,
+        expectedMicroAlgos,
+      })
+    : await verifyX402PaymentByTxId({
+        txId: txIdProof,
+        expectedReceiver: creatorWallet,
+        expectedMicroAlgos,
+      });
 
   if (!verification.valid) {
     return res.status(402).json({
@@ -261,15 +283,7 @@ router.post("/use/:serviceId", x402RateLimit, async (req, res) => {
     });
   }
 
-  // 5. Normalize the request body
-  const aiBody = normalizeBody(req.body);
-  if (!aiBody) {
-    return res.status(400).json({
-      error: "Provide either messages (array) or prompt (string) in the request body",
-    });
-  }
-
-  // 6. Decrypt the creator's provider API key
+  // 5. Decrypt the creator's provider API key
   let providerKey;
   try {
     providerKey = decryptSecret(service.encryptedApiKey);
@@ -296,7 +310,7 @@ router.post("/use/:serviceId", x402RateLimit, async (req, res) => {
           })
         ).toString("base64")
       );
-      res.flushHeaders();
+      res.flushHeaders?.();
       const streamRes = await forwardChatCompletionStream({
         provider: service.aiProvider,
         apiKey: providerKey,

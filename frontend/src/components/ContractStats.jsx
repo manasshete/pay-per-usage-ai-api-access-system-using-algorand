@@ -2,6 +2,10 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { api } from "../api/client.js";
+import {
+  signAndSendContractPurchase,
+  ensureConnectedWallet,
+} from "../wallet/pera.js";
 
 function useInView(threshold = 0.15) {
   const ref = useRef(null);
@@ -93,10 +97,13 @@ function StatCard({ label, numericValue, decimals = 0, suffix = "", hint, accent
 export default function ContractStats() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
+  const [purchasing, setPurchasing] = useState(false);
 
-  async function load() {
+  async function load(force = false) {
     try {
-      const { data: resData } = await api.get("/api/contract/stats");
+      const { data: resData } = await api.get("/api/contract/stats", {
+        params: force ? { refresh: "1" } : undefined,
+      });
       setData(resData);
       setErr(null);
     } catch (e) {
@@ -120,13 +127,43 @@ export default function ContractStats() {
     }
   }
 
+  async function testContractPurchase() {
+    if (!contract?.configured || !contract?.appId || !contract?.address) {
+      toast.error("Contract is not configured.");
+      return;
+    }
+    const amountMicroAlgos = Math.round(Number(contract.minPaymentAlgo) * 1e6);
+    if (!Number.isSafeInteger(amountMicroAlgos) || amountMicroAlgos <= 0) {
+      toast.error("Contract minimum payment is unavailable.");
+      return;
+    }
+
+    setPurchasing(true);
+    try {
+      const from = await ensureConnectedWallet();
+      const { txId } = await signAndSendContractPurchase({
+        from,
+        appId: contract.appId,
+        contractAddress: contract.address,
+        amountMicroAlgos,
+        noteStr: "sentinal-contract-purchase",
+        algodServer: data?.algodServer,
+      });
+      toast.success(`Contract purchase confirmed: ${txId.slice(0, 10)}...`);
+      await load(true);
+    } catch (e) {
+      toast.error(e?.message || "Contract purchase failed.");
+    } finally {
+      setPurchasing(false);
+    }
+  }
+
   const p = data?.platform;
   const treasury = data?.treasury;
-  const contract = data?.contract;
   const networkLabel = data?.network === "mainnet" ? "MainNet" : "TestNet";
 
   return (
-    <section className="mt-20 max-w-5xl mx-auto px-6">
+    <div className="w-full">
       <div className="text-center mb-8 flex flex-col items-center gap-2">
         <span className="text-[10px] font-bold tracking-[0.15em] text-emerald-600 uppercase bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100/50">
           On-Chain Validation
@@ -135,7 +172,7 @@ export default function ContractStats() {
           Live Platform Metrics
         </h2>
         <p className="text-sm text-slate-500 max-w-xl mx-auto leading-relaxed">
-          Real usage from Sentinel and balances read directly from the Algorand blockchain.
+          Real usage from Sentinal and balances read directly from the Algorand blockchain.
         </p>
         {data?.network && (
           <span className="inline-flex items-center gap-1.5 mt-2 text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/50 text-emerald-700">
@@ -147,7 +184,7 @@ export default function ContractStats() {
 
       {err && <p className="text-sm text-amber-800 text-center mb-4">{err}</p>}
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-6">
         <StatCard
           label="Paid API calls"
           numericValue={p?.totalApiCalls ?? 0}
@@ -174,7 +211,7 @@ export default function ContractStats() {
         />
       </div>
 
-      <div className="mt-6 grid sm:grid-cols-2 gap-6">
+      <div className="mt-6 max-w-xl">
         {/* Platform Treasury Card */}
         <motion.div 
           initial={{ opacity: 0, y: 15 }}
@@ -221,70 +258,7 @@ export default function ContractStats() {
             Live balance from Algorand · receives Studio upgrades and platform flows
           </p>
         </motion.div>
-
-        {/* On-Chain Vault Contract Card */}
-        <motion.div 
-          initial={{ opacity: 0, y: 15 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="group bg-gradient-to-br from-white/95 to-slate-50/50 backdrop-blur-sm border border-slate-200/60 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-slate-300 transition-all duration-500 flex flex-col justify-between"
-        >
-          <div>
-            <p className="text-[10px] font-bold tracking-wider text-slate-400 uppercase">On-chain vault contract</p>
-            {contract?.configured ? (
-              <>
-                <p className="font-headline text-2xl text-slate-900 font-bold mt-2">
-                  <AnimatedCounter to={contract.totalPurchases ?? 0} /> purchases
-                </p>
-                <p className="font-headline text-lg text-emerald-600 font-mono font-bold mt-1">
-                  <AnimatedCounter to={contract.totalAlgoProcessed ?? 0} decimals={4} suffix=" ALGO" />
-                </p>
-                <div className="font-mono text-xs text-slate-400 mt-2 break-all bg-slate-50 p-2 rounded-lg border border-slate-100 flex flex-col gap-0.5">
-                  <div>App ID: {contract.appId}</div>
-                  <div className="truncate">Address: {contract.address}</div>
-                </div>
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {contract.address && (
-                    <button
-                      type="button"
-                      onClick={() => copyText(contract.address, "Contract address")}
-                      className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-                    >
-                      Copy address
-                    </button>
-                  )}
-                  {contract.explorerUrl && (
-                    <a
-                      href={contract.explorerUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs px-3 py-1.5 rounded-xl border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-colors text-slate-700 font-semibold"
-                    >
-                      View app
-                    </a>
-                  )}
-                </div>
-                <p className="text-[10px] text-slate-400 mt-3 border-t border-slate-100/50 pt-2 leading-relaxed">
-                  Global counters from deployed Sentinel smart contract
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="text-xs text-slate-500 mt-3 leading-relaxed">
-                  No vault app deployed yet. Marketplace payments still go directly to creator wallets and
-                  are tracked above.
-                </p>
-                <p className="text-[10px] text-slate-400 mt-3 border-t border-slate-100/50 pt-2 font-mono">
-                  Deploy the contract and set contract/contract_info.json or ALGO_APP_ID in the backend to enable counters.
-                </p>
-              </>
-            )}
-          </div>
-        </motion.div>
       </div>
-
-
-    </section>
+    </div>
   );
 }

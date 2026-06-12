@@ -3,11 +3,38 @@ import { Link } from "react-router-dom";
 import { algoToInr, algoToUsd } from "../../constants/studioPlans.js";
 
 export default function StudioCreditWallet({ usage, compact = false }) {
+  const tier = usage?.tier || "pay-per-call";
+  const isPayPerCall = tier === "pay-per-call" || !usage?.studioCreditPool;
+
+  if (isPayPerCall) {
+    if (compact) {
+      return (
+        <div className="text-xs text-slate-600">
+          <span className="font-semibold text-[#031634]">Pay per call</span>
+        </div>
+      );
+    }
+    return (
+      <div className="rounded-md border border-surface-variant bg-white p-3 space-y-2">
+        <p className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">Billing</p>
+        <p className="text-sm font-semibold text-[#031634]">Pay-per-call active</p>
+        <p className="text-[11px] text-slate-500 leading-relaxed">
+          Each Studio run prompts for an on-chain ALGO payment via your connected wallet.
+        </p>
+        <Link
+          to="/studio/plan"
+          className="inline-block text-[11px] font-semibold text-[#031634] hover:underline"
+        >
+          View rates →
+        </Link>
+      </div>
+    );
+  }
+
   const remaining = usage?.studioCredits ?? 0;
   const pool = usage?.studioCreditPool ?? 15;
   const used = Math.max(0, pool - remaining);
   const pct = pool > 0 ? Math.min(100, (used / pool) * 100) : 0;
-  const tier = usage?.tier || "free";
   const resetAt = usage?.usageResetAt ? new Date(usage.usageResetAt) : null;
 
   if (compact) {
@@ -60,8 +87,8 @@ export default function StudioCreditWallet({ usage, compact = false }) {
 export function OveragePriceHint({ microAlgos }) {
   if (!microAlgos) return null;
   return (
-    <span className="text-slate-500">
-      ≈ ₹{algoToInr(microAlgos)} / ${algoToUsd(microAlgos)}
-    </span>
+    <p className="text-[10px] text-slate-500">
+      ≈ ₹{algoToInr(microAlgos)} · ≈ ${algoToUsd(microAlgos)}
+    </p>
   );
 }

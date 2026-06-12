@@ -1,13 +1,9 @@
-import { getApiBase } from "./client.js";
-
-function getToken() {
-  return localStorage.getItem("sentinal_token");
-}
+import { studioFetch } from "./studioFetch.js";
 
 function friendlyError(err) {
   const msg = err?.message || String(err);
-  if (msg.includes("quota exceeded") || msg.includes("403")) {
-    return "Monthly prompt limit reached. Upgrade your Studio plan to continue.";
+  if (msg.includes("quota exceeded") || msg.includes("403") || msg.includes("402")) {
+    return "Payment required. Approve the transaction in your Pera Wallet.";
   }
   if (msg.includes("401") || msg.includes("Unauthorized")) {
     return "Sign in to use the Prompt Generator.";
@@ -48,15 +44,9 @@ async function readSseStream(res, onChunk) {
 }
 
 async function postStream(path, body, onChunk) {
-  const base = getApiBase();
-  const token = getToken();
-  const res = await fetch(`${base}/api/studio${path}`, {
+  const res = await studioFetch(`/api/studio${path}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
+    body,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -66,15 +56,9 @@ async function postStream(path, body, onChunk) {
 }
 
 async function postJson(path, body) {
-  const base = getApiBase();
-  const token = getToken();
-  const res = await fetch(`${base}/api/studio${path}`, {
+  const res = await studioFetch(`/api/studio${path}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
+    body,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || res.statusText);

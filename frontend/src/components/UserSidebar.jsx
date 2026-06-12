@@ -6,7 +6,7 @@ export default function UserSidebar({ activeTab }) {
   const { user } = useAuth();
   const tabs = [
     { id: "home", path: "/dashboard/home", icon: "home", label: "Home" },
-    { id: "marketplace", path: "/dashboard/browse", icon: "storefront", label: "Marketplace" },
+    { id: "marketplace", path: "/marketplace/browse", icon: "storefront", label: "Marketplace" },
     { id: "studio", path: "/studio", icon: "widgets", label: "Studio" },
     { id: "analytics", path: "/dashboard/usage", icon: "insights", label: "Analytics" },
     { id: "billing", path: "/billing/transactions", icon: "receipt_long", label: "Billing" },
@@ -16,12 +16,12 @@ export default function UserSidebar({ activeTab }) {
     {
       title: "Marketplace",
       items: [
-        { label: "Browse APIs", path: "/dashboard/browse" },
+        { label: "Browse APIs", path: "/marketplace/browse" },
         { label: "My API Keys", path: "/dashboard/keys" },
-        { label: "Creators", path: "/dashboard/creators" },
+        { label: "Creators", path: "/marketplace/creators" },
         { label: "Usage", path: "/dashboard/usage" },
         { label: "Gateway Wallet", path: "/dashboard/gateway" },
-        { label: "API Marketplace", path: "/dashboard/gateway-marketplace" },
+        { label: "API Marketplace", path: "/marketplace/gateway" },
         { label: "Smart Contract Stats", path: "/dashboard/contract" },
         { label: "Transactions", path: "/billing/transactions" },
         { label: "x402 Docs", path: "/docs/x402" },
@@ -47,7 +47,7 @@ export default function UserSidebar({ activeTab }) {
   return (
     <aside className="fixed left-0 top-16 bottom-0 w-64 bg-slate-50 border-r border-slate-100 flex-col py-8 text-[0.875rem] overflow-y-auto max-md:hidden md:flex">
       <div className="px-6 mb-8">
-        <h3 className="text-slate-900 font-semibold">SentinelAI</h3>
+        <h3 className="text-slate-900 font-semibold">SentinalAI</h3>
         <p className="text-slate-500 text-xs">Marketplace + Studio OS</p>
       </div>
       {tabs.map((tab) => {

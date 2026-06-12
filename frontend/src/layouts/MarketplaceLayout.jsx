@@ -1,21 +1,26 @@
-import React, { useState } from "react";
+import React from "react";
 import { Outlet } from "react-router-dom";
-import { useAuth } from "../context/AuthContext.jsx";
-import UserLiveWalletBar from "../components/UserLiveWalletBar.jsx";
-import MarketplaceSidebar from "../components/MarketplaceSidebar.jsx";
+import { motion } from "framer-motion";
 import MegaNav from "../components/MegaNav.jsx";
+import MarketplaceSidebar from "../components/MarketplaceSidebar.jsx";
 
-/** Marketplace (developer) shell — use with /dashboard/* routes */
+/** Marketplace shell — public /marketplace/* browse and /dashboard/* account routes */
 export default function MarketplaceLayout() {
-  const { user } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
   return (
     <div className="antialiased min-h-screen bg-[#f9f9f9]">
       <MegaNav />
-      <MarketplaceSidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
-      <main className={`pt-20 px-6 pb-16 min-h-[60vh] transition-all duration-300 ${isCollapsed ? "md:pl-16" : "md:pl-64"}`}>
-        <Outlet />
+
+      <MarketplaceSidebar />
+
+      <main className="md:ml-[240px] pt-20 min-h-screen">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.2 }}
+          className="px-4 sm:px-6 pb-16 max-w-6xl mx-auto"
+        >
+          <Outlet />
+        </motion.div>
       </main>
     </div>
   );

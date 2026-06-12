@@ -6,17 +6,19 @@ import PromptInput from "../../components/prompt-generator/PromptInput.jsx";
 import PromptAnalyzer from "../../components/prompt-generator/PromptAnalyzer.jsx";
 import { PromptOutputWithToolbar } from "../../components/prompt-generator/PromptOutput.jsx";
 import { usePromptGenerator } from "../../components/prompt-generator/usePromptGenerator.js";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useWalletAction } from "../../hooks/useWalletAction.js";
+import GuestConnectBanner from "../../components/GuestConnectBanner.jsx";
 
 export default function PromptGenerator() {
+  const { user, isAuthenticated } = useAuth();
+  const { runWithWallet } = useWalletAction();
   const { data: usage } = useQuery({
     queryKey: ["studio-usage"],
     queryFn: async () => (await api.get("/api/studio/usage")).data,
+    enabled: Boolean(user),
   });
-  const promptLimit = usage?.monthlyPromptLimit;
-  const promptsUsed = usage?.monthlyPromptsUsed ?? 0;
-  const atCap = promptLimit != null && promptsUsed >= promptLimit;
-  const quotaLabel =
-    promptLimit != null ? `${promptsUsed} of ${promptLimit} prompts used` : `${promptsUsed} prompts used`;
+  const atCap = false;
 
   const pg = usePromptGenerator({ atCap });
 
@@ -40,23 +42,17 @@ export default function PromptGenerator() {
           <div>
             <h1 className="font-headline text-2xl font-semibold text-primary">Advanced Prompt Generator</h1>
             <p className="text-sm text-on-surface-variant mt-1 max-w-2xl">
-              Craft, analyze, and refine high-quality prompts with Gemini — included in your Studio subscription.
+              Craft, analyze, and refine high-quality prompts with Gemini — pay-per-call.
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              {usage?.tier || "free"} plan · {quotaLabel}
+              Pay-per-Call Mode · Micropayments enabled
             </p>
           </div>
         </div>
       </header>
 
-      {atCap && (
-        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          You&apos;ve reached this month&apos;s Prompt Generator limit on the {usage?.tier || "free"} plan.{" "}
-          <Link to="/studio/plan" className="font-semibold text-[#031634] underline">
-            Upgrade your plan
-          </Link>{" "}
-          to continue.
-        </div>
+      {!isAuthenticated && (
+        <GuestConnectBanner message="Connect Pera Wallet to generate and save prompts." className="mb-6" />
       )}
 
       <div className="flex flex-col xl:flex-row gap-6 items-start">
@@ -68,8 +64,8 @@ export default function PromptGenerator() {
           setEnhanceEnabled={pg.setEnhanceEnabled}
           existingPrompt={pg.existingPrompt}
           setExistingPrompt={pg.setExistingPrompt}
-          onGenerate={pg.runGenerate}
-          onEnhance={pg.runEnhance}
+          onGenerate={() => runWithWallet(() => pg.runGenerate())}
+          onEnhance={() => runWithWallet(() => pg.runEnhance())}
           loading={pg.loading}
           atCap={atCap}
         />

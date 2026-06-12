@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client.js";
 import { setCachedReceiverWallet } from "../api/studioOverage.js";
+import { getDefaultAlgodServer } from "../utils/algodConfig.js";
 
 const ENV_RECEIVER =
-  import.meta.env.VITE_SENTINEL_WALLET_ADDRESS?.trim() ||
   import.meta.env.VITE_RECEIVER_WALLET?.trim() ||
+  import.meta.env.VITE_SENTINEL_WALLET_ADDRESS?.trim() ||
   "";
-
-const DEFAULT_ALGOD =
-  import.meta.env.VITE_ALGO_NODE_URL?.trim() || "https://testnet-api.algonode.cloud";
 
 export function usePaymentConfig() {
   const [config, setConfig] = useState({
-    algodServer: DEFAULT_ALGOD,
+    algodServer: getDefaultAlgodServer(),
     receiverWallet: ENV_RECEIVER,
     loading: !ENV_RECEIVER,
   });
@@ -26,7 +24,7 @@ export function usePaymentConfig() {
         const receiverWallet = data?.receiverWallet?.trim() || ENV_RECEIVER;
         if (receiverWallet) setCachedReceiverWallet(receiverWallet);
         setConfig({
-          algodServer: data?.algodServer?.trim() || DEFAULT_ALGOD,
+          algodServer: data?.algodServer?.trim() || getDefaultAlgodServer(),
           receiverWallet,
           loading: false,
         });

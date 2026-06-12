@@ -5,21 +5,13 @@ import {
   microToInr,
   microToUsd,
 } from "../constants/studioPlans.js";
+import { getPublicReceiverWallet } from "../config/paymentConfig.js";
 import {
   buildPaymentRequirements,
   parseXPaymentHeader,
   verifyX402Payment,
 } from "../services/x402Middleware.js";
 import { logStudioOverage, isOverageTxReplay } from "../services/studioCredits.js";
-
-function getSentinelWallet() {
-  return (
-    process.env.SENTINEL_WALLET_ADDRESS?.trim() ||
-    process.env.RECEIVER_WALLET?.trim() ||
-    process.env.TREASURY_WALLET?.trim() ||
-    ""
-  );
-}
 
 /**
  * Build x402 payment middleware for a fixed overage tier.
@@ -32,7 +24,7 @@ export function createX402Gate(overageTier) {
   }
 
   return async function x402OverageGate(req, res, next) {
-    const payTo = getSentinelWallet();
+    const payTo = getPublicReceiverWallet();
     if (!payTo) {
       return res.status(500).json({ error: "SENTINEL_WALLET_ADDRESS / RECEIVER_WALLET not configured" });
     }
@@ -101,7 +93,7 @@ export function createX402Gate(overageTier) {
       creditCost: req.studioCreditCost ?? null,
       creditPool: req.studioCreditPool ?? null,
       hint:
-        "Studio Credits exhausted. Pay the overage in ALGO with Pera Wallet, or upgrade your plan for a larger monthly pool.",
+        "Connect your wallet and approve the ALGO payment to run this Studio tool.",
     };
 
     return res
@@ -135,4 +127,4 @@ export async function conditionalX402Gate(req, res, next) {
   return createX402Gate(tier)(req, res, next);
 }
 
-export { getSentinelWallet };
+export { getPublicReceiverWallet as getSentinelWallet } from "../config/paymentConfig.js";

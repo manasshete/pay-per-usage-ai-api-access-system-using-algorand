@@ -1,4 +1,5 @@
 import { api } from "./client.js";
+import { studioFetch } from "./studioFetch.js";
 
 export async function getClipCraftHealth() {
   const { data } = await api.get("/api/studio/clipcraft/health");
@@ -16,12 +17,16 @@ export async function getClipJob(jobId) {
 }
 
 export async function submitClipJob({ url, tier, packCount, idempotencyKey }) {
-  const { data } = await api.post(
-    "/api/studio/clipcraft/jobs",
-    { url, tier, packCount },
-    { headers: { "Idempotency-Key": idempotencyKey } }
-  );
-  return data;
+  const res = await studioFetch("/api/studio/clipcraft/jobs", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: { url, tier, packCount },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || res.statusText);
+  }
+  return await res.json();
 }
 
 const TERMINAL = new Set(["ready", "failed"]);

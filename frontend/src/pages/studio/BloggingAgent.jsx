@@ -8,6 +8,10 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 import { api, getApiBase } from "../../api/client.js";
+import { studioFetch } from "../../api/studioFetch.js";
+import { useAuth } from "../../context/AuthContext.jsx";
+import { useWalletAction } from "../../hooks/useWalletAction.js";
+import GuestConnectBanner from "../../components/GuestConnectBanner.jsx";
 
 const TONES = ["professional", "casual", "educational", "technical", "storytelling", "persuasive"];
 const PLATFORMS = [
@@ -16,7 +20,7 @@ const PLATFORMS = [
   { id: "linkedin", label: "LinkedIn" },
   { id: "hashnode", label: "Hashnode" },
   { id: "wordpress", label: "WordPress" },
-  { id: "sentinel-studio", label: "Sentinel Studio (internal)" },
+  { id: "sentinel-studio", label: "Sentinal Studio (internal)" },
 ];
 
 
@@ -47,6 +51,9 @@ export default function BloggingAgent() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { user, isAuthenticated } = useAuth();
+  const { runWithWallet } = useWalletAction();
+  const authEnabled = Boolean(user);
   const initialPostId = searchParams.get("post") || location.state?.postId;
 
   const [projectId, setProjectId] = useState("");
@@ -78,14 +85,17 @@ export default function BloggingAgent() {
   const { data: usage } = useQuery({
     queryKey: ["studio-usage"],
     queryFn: async () => (await api.get("/api/studio/usage")).data,
+    enabled: authEnabled,
   });
   const { data: projectsRes } = useQuery({
     queryKey: ["studio-projects"],
     queryFn: async () => (await api.get("/api/studio/projects")).data,
+    enabled: authEnabled,
   });
   const { data: connectedRes } = useQuery({
     queryKey: ["studio-platforms"],
     queryFn: async () => (await api.get("/api/studio/platforms")).data,
+    enabled: authEnabled,
   });
   const projects = projectsRes?.projects ?? [];
   const connectedSet = new Set((connectedRes?.platforms ?? []).map((p) => p.platform));
@@ -111,9 +121,7 @@ export default function BloggingAgent() {
 
   const wc = editor ? wordCountFromHtml(editor.getHTML()) : 0;
   const rt = readingTime(wc);
-  const limit = usage?.monthlyBlogLimit;
-  const used = usage?.monthlyBlogsUsed ?? 0;
-  const quotaLabel = limit != null ? `${used} of ${limit} blogs used` : `${used} blogs used`;
+  const quotaLabel = "Pay-per-Call Mode · Micropayments enabled";
 
   const loadPost = useCallback(
     async (id) => {
@@ -227,16 +235,11 @@ export default function BloggingAgent() {
     setMetaDescription("");
     setSocialSnippets({ linkedin: "", twitter: "" });
 
-    const token = getToken();
-    const url = `${getApiBase()}/api/studio/blog/generate`;
+    const url = `/api/studio/blog/generate`;
     try {
-      const res = await fetch(url, {
+      const res = await studioFetch(url, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
+        body: {
           projectId,
           topic: topic.trim(),
           keywords,
@@ -244,7 +247,7 @@ export default function BloggingAgent() {
           targetAudience,
           wordCount: wordCountTarget,
           brandVoice,
-        }),
+        },
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -422,6 +425,9 @@ export default function BloggingAgent() {
         <p className="text-sm text-on-surface-variant mt-1">
           Generate posts, connect platforms under Studio → Platforms, then publish or schedule to Dev.to, Medium, LinkedIn, and more.
         </p>
+        {!isAuthenticated && (
+          <GuestConnectBanner message="Connect Pera Wallet to generate, save, and publish blog posts." className="mt-4" />
+        )}
       </header>
 
       <div className="flex flex-col gap-6 xl:flex-row xl:items-start">
@@ -566,7 +572,7 @@ export default function BloggingAgent() {
           <button
             type="button"
             disabled={streaming || !projectId || !topic.trim()}
-            onClick={runGenerate}
+            onClick={() => runWithWallet(() => runGenerate())}
             className="w-full py-2.5 rounded-md bg-[#031634] text-white text-sm font-semibold disabled:opacity-40"
           >
             {streaming ? "Generating…" : "Generate"}
@@ -574,26 +580,26 @@ export default function BloggingAgent() {
           <div className="flex flex-col gap-2">
             <button
               type="button"
-              onClick={publishToExternalNow}
+              onClick={() => runWithWallet(() => publishToExternalNow())}
               className="w-full py-2.5 text-sm font-semibold rounded-md bg-[#031634] text-white hover:opacity-90"
             >
               Publish now (Dev.to / Medium / …)
             </button>
             <button
               type="button"
-              onClick={scheduleExternal}
+              onClick={() => runWithWallet(() => scheduleExternal())}
               className="w-full py-2 text-sm font-semibold border-2 border-[#031634] text-[#031634] rounded-md hover:bg-slate-50"
             >
               Schedule to platforms
             </button>
             <button
               type="button"
-              onClick={publishToStudioOnly}
+              onClick={() => runWithWallet(() => publishToStudioOnly())}
               className="w-full py-2 text-sm border border-slate-200 rounded-md hover:bg-slate-50"
             >
               Save to Studio only
             </button>
-            <button type="button" onClick={saveDraft} className="w-full py-2 text-xs text-slate-600 hover:underline">
+            <button type="button" onClick={() => runWithWallet(() => saveDraft())} className="w-full py-2 text-xs text-slate-600 hover:underline">
               Save draft
             </button>
             <Link to="/studio/published" className="text-center text-xs font-semibold text-secondary hover:underline">

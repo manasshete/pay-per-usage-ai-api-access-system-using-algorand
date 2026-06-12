@@ -6,6 +6,7 @@ import { api } from "../api/client.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { getPublicApiBase } from "../utils/apiBase.js";
 import MegaNav from "../components/MegaNav.jsx";
+import { testnetTxUrl } from "../utils/explorer.js";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function CreatorDashboard() {
@@ -236,8 +237,6 @@ export default function CreatorDashboard() {
     { id: "webhooks", label: "Webhooks & Events" },
     { id: "withdrawals", label: "Earnings & Payouts" },
     { id: "contract", label: "Smart Contract Stats", href: "/dashboard/contract" },
-    { id: "gateway", label: "Gateway v2", href: "/creator/gateway" },
-    { id: "gateway-admin", label: "Gateway Admin", href: "/creator/gateway-admin" },
   ];
 
   return (
@@ -511,7 +510,7 @@ export default function CreatorDashboard() {
                             <span>{row.createdAt ? new Date(row.createdAt).toLocaleString() : ""}</span>
                             {(row.paymentTxId || row.payoutTxId) && (
                               <a
-                                href={`https://testnet.algoexplorer.io/tx/${row.paymentTxId || row.payoutTxId}`}
+                                href={testnetTxUrl(row.paymentTxId || row.payoutTxId)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex items-center gap-0.5 text-slate-500 hover:text-indigo-600 transition-colors font-mono font-bold"
@@ -533,7 +532,7 @@ export default function CreatorDashboard() {
                   <div className="bg-white/70 backdrop-blur-md border border-slate-200/80 rounded-2xl p-5 mb-8 shadow-sm">
                     <h2 className="font-headline text-lg font-bold text-slate-900 mb-1">Webhooks Configuration</h2>
                     <p className="text-xs text-slate-500 leading-relaxed">
-                      Sentinel can send HTTP POST notifications to your server whenever a customer completes a paid API call.
+                      Sentinal can send HTTP POST notifications to your server whenever a customer completes a paid API call.
                       Verify requests with the <span className="font-mono text-[10px] bg-slate-100 border border-slate-200/50 px-1 rounded font-bold text-indigo-600">X-Sentinel-Signature</span> HMAC SHA256 header.
                     </p>
                   </div>
@@ -706,7 +705,7 @@ export default function CreatorDashboard() {
                   <div className="bg-white/70 backdrop-blur-md border border-slate-200/80 rounded-2xl p-5 mb-8 shadow-sm">
                     <h2 className="font-headline text-lg font-bold text-slate-900 mb-1">Request withdrawal</h2>
                     <p className="text-xs text-slate-500 mb-4">
-                      Payouts are sent from the Sentinel TestNet treasury to:{" "}
+                      Payouts are sent from the Sentinal TestNet treasury to:{" "}
                       <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200/40">{user?.walletAddress?.slice(0, 12)}…</span>
                     </p>
                     <form onSubmit={submitWithdrawal} className="flex flex-col sm:flex-row gap-3 sm:items-end">
@@ -780,7 +779,7 @@ export default function CreatorDashboard() {
                               <td className="px-5 py-3.5">
                                 {row.txId ? (
                                   <a
-                                    href={`https://testnet.algoexplorer.io/tx/${row.txId}`}
+                                    href={testnetTxUrl(row.txId)}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="font-mono text-xs text-indigo-600 hover:text-indigo-700 underline font-bold"

@@ -73,7 +73,14 @@ export default defineConfig(({ mode }) => {
       global: "globalThis",
     },
     optimizeDeps: {
-      include: ["recharts"],
+      include: [
+        "recharts",
+        "@txnlab/use-wallet-react",
+        "@txnlab/use-wallet",
+        "@blockshake/defly-connect",
+        "@agoralabs-sh/avm-web-provider",
+        "lute-connect",
+      ],
       esbuildOptions: {
         define: {
           global: "globalThis",

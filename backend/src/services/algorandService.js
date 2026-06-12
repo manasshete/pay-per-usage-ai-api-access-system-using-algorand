@@ -107,6 +107,29 @@ export function indexerTransactionConfirmedRound(txInfo) {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/** Base64 group id from an indexer transaction payload (atomic groups only). */
+export function extractGroupIdFromIndexerTx(txInfo) {
+  const tx = txInfo?.transaction ?? txInfo;
+  if (!tx) return null;
+  const group = tx.group ?? tx["group"];
+  if (!group) return null;
+  if (typeof group === "string" && group.trim()) return group.trim();
+  if (group instanceof Uint8Array || Buffer.isBuffer(group)) {
+    return Buffer.from(group).toString("base64");
+  }
+  return null;
+}
+
+/** All confirmed transactions in an atomic group (indexer search by group id). */
+export async function lookupTransactionsByGroupId(groupId) {
+  const id = typeof groupId === "string" ? groupId.trim() : "";
+  if (!id) return [];
+  const client = getIndexer();
+  const data = await client.searchForTransactions().groupId(id).do();
+  const txns = Array.isArray(data?.transactions) ? data.transactions : [];
+  return txns.map((row) => ({ id: row.id ?? null, transaction: row }));
+}
+
 /**
  * Returns true when an algosdk Indexer error is a 404 "Not Found".
  * algosdk v3 surfaces the algonode JSON body as the error message:

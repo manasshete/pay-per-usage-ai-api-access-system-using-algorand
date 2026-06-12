@@ -149,7 +149,13 @@ export function getPlanCredits(tier) {
 }
 
 export function getFeatureGates(tier) {
-  return FEATURE_GATES[tier] ?? FEATURE_GATES.free;
+  return {
+    videoAllowed: true,
+    ttsAllowed: true,
+    maxBlogs: Infinity,
+    maxProjects: Infinity,
+    publishPlatforms: ["medium", "linkedin", "wordpress", "devto", "hashnode", "twitter", "white-label"],
+  };
 }
 
 export function getCreditWeight(runType) {

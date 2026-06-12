@@ -46,9 +46,7 @@ export default function CreativeWorkflow() {
     queryKey: ["studio-usage"],
     queryFn: async () => (await api.get("/api/studio/usage")).data,
   });
-  const promptLimit = usage?.monthlyPromptLimit;
-  const promptsUsed = usage?.monthlyPromptsUsed ?? 0;
-  const atCap = promptLimit != null && promptsUsed >= promptLimit;
+  const atCap = false;
 
   const wf = useCreativeWorkflow({ atCap });
   const isThumbnail = wf.form.workflowType === "prompt-to-thumbnail";
@@ -69,21 +67,11 @@ export default function CreativeWorkflow() {
               strategy in the middle.
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              {usage?.tier || "free"} plan · {promptsUsed}
-              {promptLimit != null ? ` of ${promptLimit}` : ""} AI runs (1 per workflow)
+              Pay-per-Call Mode · Micropayments enabled
             </p>
           </div>
         </div>
       </header>
-
-      {atCap && (
-        <div className="mb-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Studio AI quota reached.{" "}
-          <Link to="/studio/plan" className="font-semibold underline text-[#031634]">
-            Upgrade
-          </Link>
-        </div>
-      )}
 
       {wf.error && (
         <div className="mb-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800 flex justify-between">

@@ -11,10 +11,10 @@ import { useStudioFeatures } from "../../../hooks/useStudioFeatures.js";
 import { CREDIT_WEIGHTS, RUN_TYPE_LABELS } from "../../../constants/studioPlans.js";
 
 const RUN_TYPE_OPTIONS = [
-  { id: "agentic_text", credits: CREDIT_WEIGHTS.agentic_text },
-  { id: "agentic_images", credits: CREDIT_WEIGHTS.agentic_images },
-  { id: "agentic_video", credits: CREDIT_WEIGHTS.agentic_video, requiresVideo: true },
-  { id: "agentic_full", credits: CREDIT_WEIGHTS.agentic_full, requiresVideo: true, requiresTts: true },
+  { id: "agentic_text", price: "0.5 ALGO" },
+  { id: "agentic_images", price: "5.0 ALGO" },
+  { id: "agentic_video", price: "15.0 ALGO", requiresVideo: true },
+  { id: "agentic_full", price: "15.0 ALGO", requiresVideo: true, requiresTts: true },
 ];
 
 export default function PipelineBuilder({ pipeline }) {
@@ -80,7 +80,7 @@ export default function PipelineBuilder({ pipeline }) {
                     ? opt.requiresVideo
                       ? "Upgrade to Pro for video (Veo)"
                       : "Upgrade for TTS"
-                    : `${opt.credits} credits`
+                    : `${opt.price} per execution`
                 }
                 onClick={() => setRunType(opt.id)}
                 className={`text-xs px-2.5 py-1 rounded-md border flex items-center gap-1 ${
@@ -95,7 +95,7 @@ export default function PipelineBuilder({ pipeline }) {
                   <span className="material-symbols-outlined text-[14px]">lock</span>
                 )}
                 {RUN_TYPE_LABELS[opt.id]?.split("(")[0].trim() || opt.id}
-                <span className="opacity-70">({opt.credits}c)</span>
+                <span className="opacity-70">({opt.price})</span>
               </button>
             );
           })}

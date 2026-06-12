@@ -1,9 +1,18 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { api, setAuthToken } from "../api/client.js";
-import { parseJwtPayload } from "../utils/jwt.js";
+import { isTokenExpired, parseJwtPayload } from "../utils/jwt.js";
 import { ensureBurnerWallet, clearActiveBurnerUser } from "../wallet/burner.js";
-import { reconnectPera, signData } from "../wallet/pera.js";
+import { reconnectPera, signData as peraSignData } from "../wallet/pera.js";
+import { getWalletSigner } from "../wallet/walletSignerBridge.js";
 import { Buffer } from "buffer";
+
+async function signAuthChallenge(messageBytes, walletAddress) {
+  const bridge = getWalletSigner();
+  if (bridge?.signData) {
+    return bridge.signData(messageBytes, walletAddress);
+  }
+  return peraSignData(messageBytes, walletAddress);
+}
 
 
 const AuthContext = createContext(null);
@@ -36,16 +45,38 @@ export function AuthProvider({ children }) {
     reconnectPera().catch((err) => console.warn("Pera auto-reconnect failed:", err));
   }, []);
 
+  const clearSession = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEY);
+    setToken(null);
+    setUser(null);
+    setAuthToken(null);
+    clearActiveBurnerUser();
+    setBurnerReady(false);
+  }, []);
+
+  useEffect(() => {
+    const onSessionExpired = () => clearSession();
+    window.addEventListener("auth:session-expired", onSessionExpired);
+    return () => window.removeEventListener("auth:session-expired", onSessionExpired);
+  }, [clearSession]);
+
   useEffect(() => {
     async function syncProfile() {
       if (token) {
+        if (isTokenExpired(token)) {
+          clearSession();
+          setLoading(false);
+          return;
+        }
         setAuthToken(token);
         const derived = userFromToken(token);
         if (derived) {
           setUser(derived);
           setBurnerReady(false);
+          let profileOk = false;
           try {
             const { data } = await api.get("/api/profile/summary");
+            profileOk = true;
             if (data?.profile) {
               setUser({
                 id: data.profile.id,
@@ -57,20 +88,25 @@ export function AuthProvider({ children }) {
               });
             }
           } catch (err) {
+            if (err?.response?.status === 401) {
+              clearSession();
+              setLoading(false);
+              return;
+            }
             console.warn("Failed to refetch latest profile data:", err.message);
+            profileOk = true;
           }
-          try {
-            await ensureBurnerWallet(derived.id);
-          } catch (err) {
-            console.warn("Burner init error:", err);
-          } finally {
-            setBurnerReady(true);
+          if (profileOk) {
+            try {
+              await ensureBurnerWallet(derived.id);
+            } catch (err) {
+              console.warn("Burner init error:", err);
+            } finally {
+              setBurnerReady(true);
+            }
           }
         } else {
-          localStorage.removeItem(STORAGE_KEY);
-          setToken(null);
-          setUser(null);
-          setAuthToken(null);
+          clearSession();
         }
       } else {
         setAuthToken(null);
@@ -81,7 +117,7 @@ export function AuthProvider({ children }) {
       setLoading(false);
     }
     syncProfile();
-  }, [token]);
+  }, [token, clearSession]);
 
   const persistSession = useCallback(async (incoming) => {
     const derived = userFromToken(incoming);
@@ -108,7 +144,7 @@ export function AuthProvider({ children }) {
 
     // 2. Sign challenge message using Pera Wallet
     const encodedMessage = new TextEncoder().encode(message);
-    const signed = await signData(encodedMessage, walletAddress);
+    const signed = await signAuthChallenge(encodedMessage, walletAddress);
     const signatureBase64 = Buffer.from(signed[0]).toString("base64");
 
     // 3. Complete login with signature verification
@@ -119,7 +155,7 @@ export function AuthProvider({ children }) {
       role,
     });
     
-    const user = persistSession(data.token);
+    const user = await persistSession(data.token);
     return {
       user,
       isNewUser: Boolean(data.isNewUser),
@@ -134,7 +170,7 @@ export function AuthProvider({ children }) {
 
     // 2. Sign challenge
     const encodedMessage = new TextEncoder().encode(message);
-    const signed = await signData(encodedMessage, walletAddress);
+    const signed = await signAuthChallenge(encodedMessage, walletAddress);
     const signatureBase64 = Buffer.from(signed[0]).toString("base64");
 
     // 3. Complete registration with verified signature
@@ -156,7 +192,7 @@ export function AuthProvider({ children }) {
 
     // 2. Sign challenge
     const encodedMessage = new TextEncoder().encode(message);
-    const signed = await signData(encodedMessage, walletAddress);
+    const signed = await signAuthChallenge(encodedMessage, walletAddress);
     const signatureBase64 = Buffer.from(signed[0]).toString("base64");
 
     // 3. Complete link-wallet with verified signature
@@ -182,13 +218,8 @@ export function AuthProvider({ children }) {
   }, [persistSession]);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setToken(null);
-    setUser(null);
-    setAuthToken(null);
-    clearActiveBurnerUser();
-    setBurnerReady(false);
-  }, []);
+    clearSession();
+  }, [clearSession]);
 
   const value = useMemo(
     () => ({
