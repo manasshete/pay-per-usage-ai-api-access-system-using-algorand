@@ -2,6 +2,10 @@ import React, { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { api } from "../api/client.js";
+import {
+  signAndSendContractPurchase,
+  ensureConnectedWallet,
+} from "../wallet/pera.js";
 
 function useInView(threshold = 0.15) {
   const ref = useRef(null);
@@ -93,10 +97,13 @@ function StatCard({ label, numericValue, decimals = 0, suffix = "", hint, accent
 export default function ContractStats() {
   const [data, setData] = useState(null);
   const [err, setErr] = useState(null);
+  const [purchasing, setPurchasing] = useState(false);
 
-  async function load() {
+  async function load(force = false) {
     try {
-      const { data: resData } = await api.get("/api/contract/stats");
+      const { data: resData } = await api.get("/api/contract/stats", {
+        params: force ? { refresh: "1" } : undefined,
+      });
       setData(resData);
       setErr(null);
     } catch (e) {
@@ -117,6 +124,37 @@ export default function ContractStats() {
       toast.success(`${label} copied`);
     } catch {
       toast.error("Copy failed");
+    }
+  }
+
+  async function testContractPurchase() {
+    if (!contract?.configured || !contract?.appId || !contract?.address) {
+      toast.error("Contract is not configured.");
+      return;
+    }
+    const amountMicroAlgos = Math.round(Number(contract.minPaymentAlgo) * 1e6);
+    if (!Number.isSafeInteger(amountMicroAlgos) || amountMicroAlgos <= 0) {
+      toast.error("Contract minimum payment is unavailable.");
+      return;
+    }
+
+    setPurchasing(true);
+    try {
+      const from = await ensureConnectedWallet();
+      const { txId } = await signAndSendContractPurchase({
+        from,
+        appId: contract.appId,
+        contractAddress: contract.address,
+        amountMicroAlgos,
+        noteStr: "sentinal-contract-purchase",
+        algodServer: data?.algodServer,
+      });
+      toast.success(`Contract purchase confirmed: ${txId.slice(0, 10)}...`);
+      await load(true);
+    } catch (e) {
+      toast.error(e?.message || "Contract purchase failed.");
+    } finally {
+      setPurchasing(false);
     }
   }
 

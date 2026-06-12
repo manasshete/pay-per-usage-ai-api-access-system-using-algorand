@@ -9,6 +9,7 @@ import logo from "../assets/logo.png";
 import MegaNav from "../components/MegaNav.jsx";
 import StudioCreditWallet from "../components/studio/StudioCreditWallet.jsx";
 import { StudioOverageProvider } from "../components/studio/OverageConsentModal.jsx";
+import { getDefaultAlgodServer } from "../utils/algodConfig.js";
 
 const STUDIO_HOME = { id: "studio-home", path: "/studio", label: "Studio Home", icon: "home" };
 
@@ -139,9 +140,7 @@ export default function StudioLayout() {
     !pathname.includes("templates") &&
     !pathname.includes("history");
 
-  const [algodServer, setAlgodServer] = useState(
-    import.meta.env.VITE_ALGO_NODE_URL?.trim() || "https://testnet-api.algonode.cloud"
-  );
+  const [algodServer, setAlgodServer] = useState(getDefaultAlgodServer());
   const [openGroups, setOpenGroups] = useState(() =>
     Object.fromEntries(NAV_GROUPS.map((g) => [g.id, g.defaultOpen ?? false]))
   );

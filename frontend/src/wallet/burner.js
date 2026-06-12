@@ -31,10 +31,7 @@ async function cacheAccountForUser(userId) {
   return acct;
 }
 
-export function getDefaultAlgodServer() {
-  const fromEnv = import.meta.env.VITE_ALGOD_SERVER?.trim();
-  return fromEnv || "https://testnet-api.algonode.cloud";
-}
+export { getDefaultAlgodServer } from "../utils/algodConfig.js";
 
 function storageKey(userId) {
   return `${BURNER_KEY_PREFIX}${userId}`;

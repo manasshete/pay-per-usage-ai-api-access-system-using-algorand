@@ -1,8 +1,5 @@
 import { api } from "./client.js";
-import { reconnectPera, normalizeAccountAddress } from "../wallet/pera.js";
-import { PeraWalletConnect } from "@perawallet/connect";
-
-const peraWallet = new PeraWalletConnect({ chainId: 416002 });
+import { buildX402PaymentHeader as buildHeader } from "../wallet/signPayment.js";
 
 let cachedReceiverWallet = "";
 
@@ -12,8 +9,8 @@ export function setCachedReceiverWallet(address) {
 
 export function getOveragePayTo() {
   return (
-    import.meta.env.VITE_SENTINEL_WALLET_ADDRESS?.trim() ||
     import.meta.env.VITE_RECEIVER_WALLET?.trim() ||
+    import.meta.env.VITE_SENTINEL_WALLET_ADDRESS?.trim() ||
     cachedReceiverWallet ||
     ""
   );
@@ -32,43 +29,15 @@ export async function resolveOveragePayTo() {
 
 /**
  * Sign, submit, and build x402 X-Payment header for Studio overage.
+ * Uses the active use-wallet provider (Pera, Defly, Exodus, Kibisis, Lute).
  * @returns {Promise<string>} base64-encoded ExactAvmPayload
  */
 export async function buildX402PaymentHeader({ from, to, amountMicroAlgos, algodServer }) {
-  const algosdk = (await import("algosdk")).default;
-  const signer = normalizeAccountAddress(from);
-  const toAddr = normalizeAccountAddress(to);
-  const amt = Math.round(Number(amountMicroAlgos));
-
-  if (!peraWallet.isConnected) {
-    await reconnectPera();
-  }
-  if (!peraWallet.isConnected) {
-    throw new Error("Connect Pera Wallet to pay Studio overage.");
-  }
-
-  const algod = new algosdk.Algodv2("", algodServer.trim(), "");
-  const suggestedParams = await algod.getTransactionParams().do();
-  const note = new TextEncoder().encode("Sentinel Studio overage");
-
-  const txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
-    sender: signer,
-    receiver: toAddr,
-    amount: amt,
-    note,
-    suggestedParams,
+  return buildHeader({
+    from,
+    to,
+    amountMicroAlgos,
+    noteStr: "Sentinel Studio overage",
+    algodServer,
   });
-
-  const signedTxns = await peraWallet.signTransaction([[{ txn }]]);
-  const signedBytes = signedTxns[0];
-  const signedB64 = Buffer.from(signedBytes).toString("base64");
-
-  const submitted = await algod.sendRawTransaction(signedBytes).do();
-  const txId = submitted?.txid ?? submitted?.txId;
-  if (!txId) throw new Error("Payment submit failed");
-
-  await algosdk.waitForConfirmation(algod, txId, 4);
-
-  const payload = { paymentGroup: [signedB64], paymentIndex: 0 };
-  return Buffer.from(JSON.stringify(payload)).toString("base64");
 }

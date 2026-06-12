@@ -2,8 +2,17 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { api, setAuthToken } from "../api/client.js";
 import { isTokenExpired, parseJwtPayload } from "../utils/jwt.js";
 import { ensureBurnerWallet, clearActiveBurnerUser } from "../wallet/burner.js";
-import { reconnectPera, signData } from "../wallet/pera.js";
+import { reconnectPera, signData as peraSignData } from "../wallet/pera.js";
+import { getWalletSigner } from "../wallet/walletSignerBridge.js";
 import { Buffer } from "buffer";
+
+async function signAuthChallenge(messageBytes, walletAddress) {
+  const bridge = getWalletSigner();
+  if (bridge?.signData) {
+    return bridge.signData(messageBytes, walletAddress);
+  }
+  return peraSignData(messageBytes, walletAddress);
+}
 
 
 const AuthContext = createContext(null);
@@ -135,7 +144,7 @@ export function AuthProvider({ children }) {
 
     // 2. Sign challenge message using Pera Wallet
     const encodedMessage = new TextEncoder().encode(message);
-    const signed = await signData(encodedMessage, walletAddress);
+    const signed = await signAuthChallenge(encodedMessage, walletAddress);
     const signatureBase64 = Buffer.from(signed[0]).toString("base64");
 
     // 3. Complete login with signature verification
@@ -146,7 +155,7 @@ export function AuthProvider({ children }) {
       role,
     });
     
-    const user = persistSession(data.token);
+    const user = await persistSession(data.token);
     return {
       user,
       isNewUser: Boolean(data.isNewUser),
@@ -161,7 +170,7 @@ export function AuthProvider({ children }) {
 
     // 2. Sign challenge
     const encodedMessage = new TextEncoder().encode(message);
-    const signed = await signData(encodedMessage, walletAddress);
+    const signed = await signAuthChallenge(encodedMessage, walletAddress);
     const signatureBase64 = Buffer.from(signed[0]).toString("base64");
 
     // 3. Complete registration with verified signature
@@ -183,7 +192,7 @@ export function AuthProvider({ children }) {
 
     // 2. Sign challenge
     const encodedMessage = new TextEncoder().encode(message);
-    const signed = await signData(encodedMessage, walletAddress);
+    const signed = await signAuthChallenge(encodedMessage, walletAddress);
     const signatureBase64 = Buffer.from(signed[0]).toString("base64");
 
     // 3. Complete link-wallet with verified signature

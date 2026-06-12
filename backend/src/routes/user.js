@@ -203,6 +203,9 @@ router.get("/transactions", requireAuth, requireRole("user", "creator"), async (
       proofTxId: l.proofTxId ?? null,
       success: l.success !== false,
       paymentTxId: l.paymentTxId ?? null,
+      paymentGroupId: l.paymentGroupId ?? null,
+      paymentGroupTxIds: Array.isArray(l.paymentGroupTxIds) ? l.paymentGroupTxIds : [],
+      x402Payment: Boolean(l.x402Payment),
     }));
 
     const totalCalls = items.length;

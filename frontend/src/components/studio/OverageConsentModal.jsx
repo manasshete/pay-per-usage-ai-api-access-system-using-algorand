@@ -1,8 +1,7 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
 import { algoToInr, algoToUsd, RUN_TYPE_LABELS } from "../../constants/studioPlans.js";
 import { buildX402PaymentHeader, resolveOveragePayTo } from "../../api/studioOverage.js";
-import { reconnectPera } from "../../wallet/pera.js";
+import { ensureConnectedWallet } from "../../wallet/signPayment.js";
 import { useAuth } from "../../context/AuthContext.jsx";
 
 export default function OverageConsentModal({ open, overage, onCancel, onSuccess, algodServer }) {
@@ -21,8 +20,8 @@ export default function OverageConsentModal({ open, overage, onCancel, onSuccess
     try {
       const payTo = await resolveOveragePayTo();
       if (!payTo) throw new Error("Payment wallet is not configured on the server.");
-      const from = user?.walletAddress || (await reconnectPera());
-      if (!from) throw new Error("Link Pera wallet in Profile first.");
+      const from = user?.walletAddress || (await ensureConnectedWallet());
+      if (!from) throw new Error("Link your wallet in Profile first.");
 
       const xPayment = await buildX402PaymentHeader({
         from,

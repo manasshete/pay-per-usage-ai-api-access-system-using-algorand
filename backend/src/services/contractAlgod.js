@@ -30,7 +30,7 @@ export async function readContractGlobalUints() {
   try {
     const client = getAlgod();
     const app = await client.getApplicationByID(appId).do();
-    const rows = app.params?.["global-state"] || [];
+    const rows = app.params?.globalState || app.params?.["global-state"] || [];
     const entries = [];
     const raw = {};
     for (const row of rows) {

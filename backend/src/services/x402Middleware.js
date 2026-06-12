@@ -27,6 +27,10 @@ import { x402Version } from "@x402/core";
 import {
   lookupConfirmedTransactionOnIndexer,
   normalizeAlgoAddress,
+  parsePaymentFromIndexer,
+  extractGroupIdFromIndexerTx,
+  lookupTransactionsByGroupId,
+  indexerTransactionConfirmedRound,
 } from "./algorandService.js";
 import { microAlgosWithinTolerance } from "./billing.js";
 
@@ -113,6 +117,49 @@ export function parseXPaymentHeader(headerValue) {
   }
 }
 
+// ─── Group ID helpers ────────────────────────────────────────────────────────
+
+/**
+ * Compute the atomic group ID from signed transaction bytes in an x402 paymentGroup.
+ * Returns null for single-txn payments (no on-chain group).
+ */
+function computeGroupIdFromSignedPaymentGroup(paymentGroup) {
+  if (!Array.isArray(paymentGroup) || paymentGroup.length <= 1) return null;
+  try {
+    const txns = paymentGroup.map((b64) => {
+      const bytes = Buffer.from(b64, "base64");
+      return decodeSignedTransaction(bytes).txn;
+    });
+    return Buffer.from(algosdk.computeGroupID(txns)).toString("base64");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Resolve group metadata after indexer confirmation.
+ */
+async function resolveGroupMetadata(txInfo, { paymentGroup, computedGroupId } = {}) {
+  const groupId = extractGroupIdFromIndexerTx(txInfo) || computedGroupId || null;
+  let groupTxIds = [];
+  if (groupId) {
+    try {
+      const groupTxs = await lookupTransactionsByGroupId(groupId);
+      groupTxIds = groupTxs.map((t) => t.id).filter(Boolean);
+    } catch (e) {
+      console.warn("[x402Middleware] group lookup failed:", e?.message || e);
+    }
+  }
+  if (!groupTxIds.length && txInfo?.transaction?.id) {
+    groupTxIds = [txInfo.transaction.id];
+  }
+  return {
+    groupId,
+    groupTxIds,
+    confirmedRound: indexerTransactionConfirmedRound(txInfo),
+  };
+}
+
 // ─── Verify x402 Payment ─────────────────────────────────────────────────────
 
 /**
@@ -130,11 +177,12 @@ export function parseXPaymentHeader(headerValue) {
  * @param {{ paymentGroup: string[], paymentIndex: number }} opts.payload  Parsed header
  * @param {string}  opts.expectedReceiver  Creator wallet (canonical form)
  * @param {number}  opts.expectedMicroAlgos  Exact amount quoted in the 402
- * @returns {Promise<{ valid: true, txId: string, senderAddress: string } | { valid: false, error: string }>}
+ * @returns {Promise<{ valid: true, txId: string, senderAddress: string, groupId: string | null, groupTxIds: string[], confirmedRound: number | null } | { valid: false, error: string }>}
  */
 export async function verifyX402Payment({ payload, expectedReceiver, expectedMicroAlgos }) {
   try {
     const { paymentGroup, paymentIndex } = payload;
+    const computedGroupId = computeGroupIdFromSignedPaymentGroup(paymentGroup);
 
     // 1. Bounds check on the payment index
     if (paymentIndex < 0 || paymentIndex >= paymentGroup.length) {
@@ -210,8 +258,9 @@ export async function verifyX402Payment({ payload, expectedReceiver, expectedMic
     }
 
     // 8. Wait for on-chain confirmation via Algorand Indexer
+    let txInfo;
     try {
-      await lookupConfirmedTransactionOnIndexer(txId, { maxAttempts: 12, delayMs: 2000 });
+      txInfo = await lookupConfirmedTransactionOnIndexer(txId, { maxAttempts: 18, delayMs: 2000 });
     } catch (e) {
       return {
         valid: false,
@@ -219,9 +268,85 @@ export async function verifyX402Payment({ payload, expectedReceiver, expectedMic
       };
     }
 
-    return { valid: true, txId, senderAddress: normalizeAlgoAddress(senderAddress) };
+    const indexerGroupId = extractGroupIdFromIndexerTx(txInfo);
+    if (computedGroupId && indexerGroupId && computedGroupId !== indexerGroupId) {
+      return {
+        valid: false,
+        error: "Payment group ID mismatch between signed payload and on-chain transaction",
+      };
+    }
+
+    const groupMeta = await resolveGroupMetadata(txInfo, { paymentGroup, computedGroupId });
+
+    return {
+      valid: true,
+      txId,
+      senderAddress: normalizeAlgoAddress(senderAddress),
+      groupId: groupMeta.groupId,
+      groupTxIds: groupMeta.groupTxIds,
+      confirmedRound: groupMeta.confirmedRound,
+    };
   } catch (e) {
     console.error("[x402Middleware] verifyX402Payment unexpected error:", e);
+    return { valid: false, error: `Internal verification error: ${e.message}` };
+  }
+}
+
+/**
+ * Verify an already-broadcast payment by transaction ID (Indexer lookup).
+ * Use when the client paid on-chain (e.g. via Pera or @x402/fetch) but only has txId,
+ * not the signed bytes needed for the standard X-Payment header.
+ */
+export async function verifyX402PaymentByTxId({ txId, expectedReceiver, expectedMicroAlgos }) {
+  try {
+    const id = String(txId || "").trim();
+    if (!id) {
+      return { valid: false, error: "Missing transaction id" };
+    }
+
+    let txInfo;
+    try {
+      txInfo = await lookupConfirmedTransactionOnIndexer(id, { maxAttempts: 18, delayMs: 2000 });
+    } catch (e) {
+      return {
+        valid: false,
+        error: `Transaction ${id} not confirmed on Algorand TestNet Indexer: ${e.message}`,
+      };
+    }
+
+    const parsed = parsePaymentFromIndexer(txInfo);
+    if (!parsed) {
+      return { valid: false, error: 'Invalid transaction type: expected native ALGO payment (type "pay")' };
+    }
+
+    const txReceiver = normalizeAlgoAddress(parsed.receiver);
+    const expectedReceiverN = normalizeAlgoAddress(expectedReceiver);
+    if (txReceiver !== expectedReceiverN) {
+      return {
+        valid: false,
+        error: `Payment receiver mismatch. Expected ${expectedReceiverN}, got ${txReceiver}`,
+      };
+    }
+
+    if (!microAlgosWithinTolerance(Number(parsed.amount), expectedMicroAlgos, 1)) {
+      return {
+        valid: false,
+        error: `Amount mismatch. Expected ~${expectedMicroAlgos} microAlgos (±1%), got ${parsed.amount}`,
+      };
+    }
+
+    const groupMeta = await resolveGroupMetadata(txInfo);
+
+    return {
+      valid: true,
+      txId: id,
+      senderAddress: normalizeAlgoAddress(parsed.sender),
+      groupId: groupMeta.groupId,
+      groupTxIds: groupMeta.groupTxIds,
+      confirmedRound: groupMeta.confirmedRound,
+    };
+  } catch (e) {
+    console.error("[x402Middleware] verifyX402PaymentByTxId unexpected error:", e);
     return { valid: false, error: `Internal verification error: ${e.message}` };
   }
 }

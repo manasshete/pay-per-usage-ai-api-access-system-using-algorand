@@ -43,12 +43,11 @@ export async function studioFetch(url, options = {}) {
     }
     const overage = payload.studioOverage;
     if (!overage?.amountMicroAlgos) {
-      const hint = payload.hint || payload.error || "Payment required";
-      const credits =
-        payload.creditsRemaining != null
-          ? ` (${payload.creditsRemaining} credits left, need ${payload.creditCost ?? "?"})`
-          : "";
-      throw new Error(`${hint}${credits}. Deploy the latest backend or upgrade at /studio/plan.`);
+      const hint =
+        payload.hint ||
+        payload.error ||
+        "Connect your wallet and approve the ALGO payment to continue.";
+      throw new Error(hint);
     }
     const xPayment = await requestOverageConsent(overage);
     if (!xPayment) {

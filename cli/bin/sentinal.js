@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import { runDeploy } from "../src/deploy.js";
 import { runBalance } from "../src/balance.js";
 import { runMonitor } from "../src/monitor.js";
+import { runVerifyContract } from "../src/verifyContract.js";
 
 dotenv.config();
 
@@ -33,7 +34,7 @@ ${pink}'--'.     / '   |  / |   | |--'    ;  :    ;|  | '.'||   | |--'  /  /  ,.
               ${pink}\`----'                         ---\`-'              \`--\`---'             ${reset}
 
      ${green}On-Chain Pay-Per-Use AI Gateway Protocol${reset}
-     ${gray}Algorand TestNet App ID: 763786783${reset}
+     ${gray}Deploy and verify Sentinel contracts on Algorand${reset}
 `);
 }
 
@@ -50,12 +51,34 @@ program
   .command("deploy")
   .description("Deploy a new Sentinel app contract to Algorand")
   .option("-n, --network <network>", "Algorand network (mainnet or testnet)", "testnet")
-  .option("-m, --mnemonic <mnemonic>", "Creator wallet mnemonic phrase")
+  .option("-m, --mnemonic <mnemonic>", "Deployer mnemonic; prefer DEPLOYER_MNEMONIC")
+  .option("--min-micro-algos <amount>", "Minimum purchase amount in microAlgos")
+  .option("--algod-server <url>", "Custom Algod server URL")
+  .option("--algod-token <token>", "Custom Algod API token")
+  .option("--output <path>", "Path for deployed contract metadata")
+  .option("--yes-mainnet", "Confirm that real MainNet deployment is intended")
   .action(async (options) => {
     try {
       await runDeploy(options);
     } catch (e) {
       console.error("Deploy failed:", e.message);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("verify-contract")
+  .description("Verify a deployed Sentinel contract and print its global state")
+  .option("-i, --app-id <appId>", "Sentinel application ID")
+  .option("-a, --contract-address <address>", "Expected contract address")
+  .option("-n, --network <network>", "Algorand network (mainnet or testnet)", "testnet")
+  .option("--algod-server <url>", "Custom Algod server URL")
+  .option("--algod-token <token>", "Custom Algod API token")
+  .action(async (options) => {
+    try {
+      await runVerifyContract(options);
+    } catch (e) {
+      console.error("Contract verification failed:", e.message);
       process.exit(1);
     }
   });

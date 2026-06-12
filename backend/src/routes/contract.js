@@ -58,10 +58,11 @@ router.get("/activity", async (_req, res) => {
   }
 });
 
-router.get("/stats", async (_req, res) => {
+router.get("/stats", async (req, res) => {
   try {
     const now = Date.now();
-    if (statsCache.payload && now - statsCache.at < CACHE_MS) {
+    const forceRefresh = req.query.refresh === "1";
+    if (!forceRefresh && statsCache.payload && now - statsCache.at < CACHE_MS) {
       return res.json(statsCache.payload);
     }
     const payload = await getPlatformStats();

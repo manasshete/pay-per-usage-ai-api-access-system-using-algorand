@@ -7,3 +7,6 @@ export function getPublicReceiverWallet() {
     ""
   );
 }
+
+/** @deprecated Use getPublicReceiverWallet — same resolution order. */
+export const getSentinelWallet = getPublicReceiverWallet;

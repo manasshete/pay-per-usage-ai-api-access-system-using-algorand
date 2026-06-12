@@ -7,6 +7,14 @@ services:
     rootDir: .
     buildCommand: npm run build
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
+      # Non-secret contract configuration. Update these after deploying a new app.
+      - key: ALGOD_SERVER
+        value: https://testnet-api.algonode.cloud
+      - key: ALGO_APP_ID
+        value: "763786783"
+      - key: ALGO_CONTRACT_ADDRESS
+        value: F3IGSPZCDJ6TUQSS22YSSGXNJP2JR47SQ5C5O64PVJCJ7CWTG6XNFTDLHM
